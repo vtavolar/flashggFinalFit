@@ -1765,6 +1765,7 @@ if options.datfile:
       config[opt.split('=')[0]] = opt.split('=')[1].replace('EQUALS','=').strip('\n').split(',')
       #print line 
       #print opt.split('=')[0], " " , opt.split('=')[1].replace('EQUALS','=').strip('\n').split(',')  
+      print str(opt.split('=')[0])+' '+str(config[opt.split('=')[0]])
     for opt in ['colors','styles','widths']:
       if opt in config.keys():
         config[opt] = [int(x) for x in config[opt]]

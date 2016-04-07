@@ -1,0 +1,22 @@
+#datacard=CMS-HGG_mva_13TeV_datacard!EXT!.txt
+datacard=CMS-HGG_mva_13TeV_datacard.txt
+files=CMS-HGG_sigfit_mva_ggh_TTHHadronicTag.root,CMS-HGG_sigfit_mva_ggh_TTHLeptonicTag.root,CMS-HGG_sigfit_mva_ggh_UntaggedTag_0.root,CMS-HGG_sigfit_mva_ggh_UntaggedTag_1.root,CMS-HGG_sigfit_mva_ggh_UntaggedTag_2.root,CMS-HGG_sigfit_mva_ggh_UntaggedTag_3.root,CMS-HGG_sigfit_mva_ggh_VBFTag_0.root,CMS-HGG_sigfit_mva_ggh_VBFTag_1.root,root,CMS-HGG_sigfit_mva_tth_TTHHadronicTag.root,CMS-HGG_sigfit_mva_tth_TTHLeptonicTag.root,CMS-HGG_sigfit_mva_tth_UntaggedTag_0.root,CMS-HGG_sigfit_mva_tth_UntaggedTag_1.root,CMS-HGG_sigfit_mva_tth_UntaggedTag_2.root,CMS-HGG_sigfit_mva_tth_UntaggedTag_3.root,CMS-HGG_sigfit_mva_tth_VBFTag_0.root,CMS-HGG_sigfit_mva_tth_VBFTag_1.root,CMS-HGG_sigfit_mva_vbf_TTHHadronicTag.root,CMS-HGG_sigfit_mva_vbf_TTHLeptonicTag.root,CMS-HGG_sigfit_mva_vbf_UntaggedTag_0.root,CMS-HGG_sigfit_mva_vbf_UntaggedTag_1.root,CMS-HGG_sigfit_mva_vbf_UntaggedTag_2.root,CMS-HGG_sigfit_mva_vbf_UntaggedTag_3.root,CMS-HGG_sigfit_mva_vbf_VBFTag_0.root,CMS-HGG_sigfit_mva_vbf_VBFTag_1.root,CMS-HGG_sigfit_mva_wh_TTHHadronicTag.root,CMS-HGG_sigfit_mva_wh_TTHLeptonicTag.root,CMS-HGG_sigfit_mva_wh_UntaggedTag_0.root,CMS-HGG_sigfit_mva_wh_UntaggedTag_1.root,CMS-HGG_sigfit_mva_wh_UntaggedTag_2.root,CMS-HGG_sigfit_mva_wh_UntaggedTag_3.root,CMS-HGG_sigfit_mva_wh_VBFTag_0.root,CMS-HGG_sigfit_mva_wh_VBFTag_1.root,CMS-HGG_sigfit_mva_zh_TTHHadronicTag.root,CMS-HGG_sigfit_mva_zh_TTHLeptonicTag.root,CMS-HGG_sigfit_mva_zh_UntaggedTag_0.root,CMS-HGG_sigfit_mva_zh_UntaggedTag_1.root,CMS-HGG_sigfit_mva_zh_UntaggedTag_2.root,CMS-HGG_sigfit_mva_zh_UntaggedTag_3.root,CMS-HGG_sigfit_mva_zh_VBFTag_0.root,CMS-HGG_sigfit_mva_zh_VBFTag_1.root,CMS-HGG_mva_13TeV_multipdf.root
+#files=CMS-HGG_sigfit_!EXT!.root,CMS-HGG_mva_13TeV_multipdf.root
+#files=CMS-HGG_mva_13TeV_sigfit.root,CMS-HGG_mva_13TeV_multipdf.root
+
+
+#MultiPdfChannelCompatibility
+#outDir=combineJobs13TeV_test/MultiPdfChannelCompatibility												method=MultiPdfChannelCompatibility expected=0  mh=125.09 muLow=-10. muHigh=20. jobs=1 pointsperjob=100
+#above is just shorthand for a muscan split by each cat in the datacard
+#outDir=combineJobs13TeV_test/MultiPdfChannelCompatibility/VBF													method=MuScan	expected=0 mh=125.09 muLow=-10. muHigh=10. jobs=1 pointsperjob=100 splitChannels=VBFTag_0_13TeV,VBFTag_1_13TeV
+#outDir=combineJobs13TeV_test/MultiPdfChannelCompatibility/Untagged													method=MuScan	expected=0 mh=125.09 muLow=-10. muHigh=10. jobs=1 pointsperjob=100 splitChannels=UntaggedTag_0_13TeV,UntaggedTag_1_13TeV,UntaggedTag_2_13TeV,UntaggedTag_3_13TeV
+#outDir=combineJobs13TeV_test/MultiPdfChannelCompatibility/TTH													method=MuScan	expected=0 mh=125.09 muLow=-10. muHigh=10. jobs=1 pointsperjob=100 splitChannels=TTHLeptonicTag_13TeV,TTHHadronicTag_13TeV
+
+#all bins, all processes
+outDir=combineJobs13TeV_test/MultiPdfChannelCompatibility_TopoScan/Combined	method=RTopoScan	expected=0 mh=125.09 muLow=-2. muHigh=10. profileMH=False catsMap='.*/.*:r[1,0,10]' jobs=1 pointsperjob=100
+#untaggedtag bins, all processes
+outDir=combineJobs13TeV_test/MultiPdfChannelCompatibility_TopoScan/Untagged	method=RTopoScan	expected=0 mh=125.09 muLow=-2. muHigh=10. profileMH=False catsMap='UntaggedTag.*/.*:r[1,0,10]' jobs=1 pointsperjob=100
+#vbftag bins, all processes
+outDir=combineJobs13TeV_test/MultiPdfChannelCompatibility_TopoScan/VBF	method=RTopoScan	expected=0 mh=125.09 muLow=-2. muHigh=10. profileMH=False catsMap='VBFTag.*/.*:r[1,0,10]' jobs=1 pointsperjob=100
+#untaggedtag bins, all processes
+outDir=combineJobs13TeV_test/MultiPdfChannelCompatibility_TopoScan/TTH	method=RTopoScan	expected=0 mh=125.09 muLow=-2. muHigh=10. profileMH=False catsMap='TTH.*?Tag.*/.*:r[1,0,10]' jobs=1 pointsperjob=100
