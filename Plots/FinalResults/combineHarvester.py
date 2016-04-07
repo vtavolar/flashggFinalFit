@@ -94,6 +94,7 @@ specOpts.add_option("--files",default=None)
 specOpts.add_option("--outDir",default=None)
 specOpts.add_option("--method",default=None)
 specOpts.add_option("--expected",type="int",default=None)
+specOpts.add_option("--mh",type="float",default=None)
 specOpts.add_option("--mhLow",type="float",default=None)
 specOpts.add_option("--mhHigh",type="float",default=None)
 specOpts.add_option("--mhStep",type="float",default=None)
@@ -117,7 +118,7 @@ specOpts.add_option("--pointsperjob",type="int",default=1)
 specOpts.add_option("--expectSignal",type="float",default=None)
 specOpts.add_option("--expectSignalMass",type="float",default=None)
 specOpts.add_option("--splitChannels",default=None)
-specOpts.add_option("--profileMH",default=True)
+specOpts.add_option("--profileMH",default=False)
 specOpts.add_option("--toysFile",default=None)
 specOpts.add_option("--additionalOptions",default="",type="string")
 specOpts.add_option("--postFit",default=False,action="store_true",help="Use post-fit nuisances")
@@ -647,7 +648,8 @@ def writeMultiDimFit(method=None,wsOnly=False):
           if opts.parallel and opts.dryRun:
                           parallel.run(system,(exec_line,))
           else:
-                          system(exec_line)
+              print '****DEBUG this is what is going to be executed: '+str(exec_line)
+              system(exec_line)
               
         if wsOnly:
            return
