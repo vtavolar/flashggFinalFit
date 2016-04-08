@@ -93,6 +93,7 @@ specOpts.add_option("--datacard",default=None)
 specOpts.add_option("--files",default=None)
 specOpts.add_option("--outDir",default=None)
 specOpts.add_option("--method",default=None)
+specOpts.add_option("--catName",default="", type="string")
 specOpts.add_option("--expected",type="int",default=None)
 specOpts.add_option("--mh",type="float",default=None)
 specOpts.add_option("--mhLow",type="float",default=None)
@@ -696,9 +697,10 @@ def writeMultiDimFit(method=None,wsOnly=False):
         if (opts.mhRange>-1):
          makeFloatMHCard()
         if not opts.skipWorkspace:
+          print "we enter if not opts.skipWorkspace"  
           datacardname = os.path.basename(opts.datacard).replace('.txt','')
           print 'Creating workspace for %s...'%method
-          exec_line = 'text2workspace.py %s -o %s %s'%(os.path.abspath(opts.datacard),os.path.abspath(opts.datacard).replace('.txt',method+'.root'),ws_args[method]) 
+          exec_line = 'text2workspace.py %s -o %s %s'%(os.path.abspath(opts.datacard),os.path.abspath(opts.datacard).replace('.txt',method+opts.catName+'.root'),ws_args[method]) 
           print exec_line
           if opts.postFit:
                           exec_line += '&& combine -m 125 -M MultiDimFit --saveWorkspace -n %s_postFit %s' % ( datacardname+method, os.path.abspath(opts.datacard).replace('.txt',method+'.root') )
@@ -750,7 +752,8 @@ def writeMultiDimFit(method=None,wsOnly=False):
                              opts.additionalOptions += " --setPhysicsModelParameters %s" %pars
       
         else:
-          opts.datacard = opts.datacard.replace('.txt',method+'.root')
+            print "we enter the else"
+            opts.datacard = opts.datacard.replace('.txt',method+opts.catName+'.root')
               
                   
                   
@@ -842,6 +845,7 @@ def configure(config_line):
     if option.startswith('pointsperjob='): opts.pointsperjob = int(option.split('=')[1])
     if option.startswith('splitChannels='): opts.splitChannels = option.split('=')[1].split(',')
     if option.startswith('toysFile='): opts.toysFile = option.split('=')[1]
+    if option.startswith('catName='): opts.catName = '_'+option.split('=')[1]
     if option.startswith('mh='): 
       #opts.mh = float(option.split('=')[1])
       mhStr = (option.split('=')[1])
