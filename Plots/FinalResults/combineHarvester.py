@@ -290,14 +290,15 @@ def makeNoGlobCard():
   outf.close()
   opts.datacard = newcardname 
 
-def writePreamble(sub_file):
+def writePreambleT3(sub_file):
   #print "[INFO] writing preamble"
   sub_file.write('#!/bin/bash\n')
   sub_file.write('touch %s.run\n'%os.path.abspath(sub_file.name))
   sub_file.write('cd %s\n'%os.getcwd())
-  sub_file.write('eval `scramv1 runtime -sh`\n')
+  sub_file.write('source $VO_CMS_SW_DIR/cmsset_default.sh')
+  sub_file.write('source /swshare/glite/external/etc/profile.d/grid-env.sh')
+#  sub_file.write('eval `scramv1 runtime -sh`\n')
   #sub_file.write('cd -\n')
-  if (opts.batch == "IC" ) : sub_file.write('cd $TMPDIR\n')
   sub_file.write('number=$RANDOM\n')
   sub_file.write('mkdir -p scratch_$number\n')
   sub_file.write('cd scratch_$number\n')
@@ -309,11 +310,44 @@ def writePreamble(sub_file):
   for file in opts.files.split(','):
     sub_file.write('cp -p %s .\n'%os.path.abspath(file))
 
+def writePreamble(sub_file):
+  #print "[INFO] writing preamble"
+  sub_file.write('#!/bin/bash\n')
+  sub_file.write('set -x\n')
+  sub_file.write('touch %s.run\n'%os.path.abspath(sub_file.name))
+  sub_file.write('cd %s\n'%os.getcwd())
+  if (opts.batch == "IC"):
+      sub_file.write('source $VO_CMS_SW_DIR/cmsset_default.sh\n')
+      sub_file.write('source /mnt/t3nfs01/data01/swshare/glite/external/etc/profile.d/grid-env.sh\n')
+      sub_file.write('export SCRAM_ARCH=slc6_amd64_gcc481\n')
+      sub_file.write('export LD_LIBRARY_PATH=/swshare/glite/d-cache/dcap/lib/:$LD_LIBRARY_PATH\n')
+  #if (opts.batch == "LSF"):
+  sub_file.write('set +x\n') 
+  sub_file.write('eval `scramv1 runtime -sh`\n')
+  sub_file.write('set -x\n') 
+  #sub_file.write('cd -\n')
+  if (opts.batch == "IC" ) : sub_file.write('cd $TMPDIR\n')
+  sub_file.write('number=$RANDOM\n')
+  sub_file.write('mkdir -p scratch_$number\n')
+  sub_file.write('cd scratch_$number\n')
+  sub_file.write('ls $CMSSW_BASE/bin/$SCRAM_ARCH/combine\n')
+  sub_file.write('cp -p $CMSSW_BASE/bin/$SCRAM_ARCH/combine .\n')
+  sub_file.write('cp -p %s .\n'%os.path.abspath(opts.datacard))
+  sub_file.write('mkdir /scratch/$USER\n')
+  if opts.toysFile: 
+    for f in opts.toysFile.split(','):
+      sub_file.write('cp -p %s .\n'%os.path.abspath(f))
+  for file in opts.files.split(','):
+    sub_file.write('cp -p %s .\n'%os.path.abspath(file))
+
 def writePostamble(sub_file, exec_line):
 
   #print "[INFO] writing to postamble"
   if opts.S0: exec_line += ' -S 0 '
+  if (opts.batch == "IC"):
+      exec_line += ' &> /scratch/$USER/wn_log.txt'
   sub_file.write('if ( %s ) then\n'%exec_line)
+  sub_file.write('\t cp /scratch/$USER/wn_log.txt %s\n'%os.path.abspath(opts.outDir))
   sub_file.write('\t mv higgsCombine*.root %s\n'%os.path.abspath(opts.outDir))
   sub_file.write('\t touch %s.done\n'%os.path.abspath(sub_file.name))
   sub_file.write('else\n')
@@ -329,7 +363,7 @@ def writePostamble(sub_file, exec_line):
     system('rm -f %s.fail'%os.path.abspath(sub_file.name))
     system('rm -f %s.log'%os.path.abspath(sub_file.name))
     if (opts.batch == "LSF") : system('bsub -q %s -o %s.log %s'%(opts.queue,os.path.abspath(sub_file.name),os.path.abspath(sub_file.name)))
-    if (opts.batch == "IC") : system('qsub -q %s -o %s.log -e %s.err %s > out.txt'%(opts.queue,os.path.abspath(sub_file.name),os.path.abspath(sub_file.name),os.path.abspath(sub_file.name)))
+    if (opts.batch == "IC") : system('qsub -l h_vmem=6g -q %s -o %s.log -e %s.err %s > out.txt'%(opts.queue,os.path.abspath(sub_file.name),os.path.abspath(sub_file.name),os.path.abspath(sub_file.name)))
     #if (opts.batch == "IC") : system('qsub %s -q %s -o %s.log '%(os.path.abspath(sub_file.name),opts.queue,os.path.abspath(sub_file.name)))
   if opts.runLocal:
     if opts.parallel:
