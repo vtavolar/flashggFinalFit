@@ -1,15 +1,11 @@
 #!/bin/bash
 
-
 #bash variables
 FILE="";
 EXT="auto"; #extensiom for all folders and files created by this script
 PROCS="ggh"
-#CATS="UntaggedTag_0,UntaggedTag_1,UntaggedTag_2,UntaggedTag_3,UntaggedTag_4,VBFTag_0,VBFTag_1,VBFTag_2,TTHHadronicTag,TTHLeptonicTag,VHHadronicTag,VHTightTag,VHLooseTag,VHEtTag"
 CATS="UntaggedTag_0,UntaggedTag_1,UntaggedTag_2,UntaggedTag_3,UntaggedTag_4,VBFTag_0,VBFTag_1,VBFTag_2"
-#CATS="UntaggedTag_0,UntaggedTag_1,UntaggedTag_2,UntaggedTag_3,UntaggedTag_4,VBFTag_0,VBFTag_1,VBFTag_2,VHHadronicTag,VHTightTag,VHLooseTag"
 SCALES="HighR9EE,LowR9EE,HighR9EB,LowR9EB"
-#SMEARS="HighR9EE,LowR9EE,HighR9EBRho,LowR9EBRho,HighR9EBPhi,LowR9EBPhi"
 SMEARS="HighR9EE,LowR9EE,HighR9EB,LowR9EB" #DRY RUN
 FTESTONLY=0
 CALCPHOSYSTONLY=0
@@ -78,7 +74,7 @@ echo "INTLUMI $INTLUMI"
 
 OUTDIR="outdir_$EXT"
 echo "[INFO] outdir is $OUTDIR" 
-if [ "$FILE" == "" ];then
+if [[ $FILE == "" ]];then
 echo "ERROR, input file (--inputFile or -i) is mandatory!"
 exit 0
 fi
@@ -91,20 +87,17 @@ SIGFITONLY=1
 SIGPLOTSONLY=1
 fi
 
-if [ $BATCH == "IC" ]; then
+if [[ $BATCH == "IC" ]]; then
 DEFAULTQUEUE=hepshort.q
-#DEFAULTQUEUE=hepmedium.q
-BATCHQUERY="qstat -u $USER -q hepshort.q"
 fi
-if [ $BATCH == "LSF" ]; then
+if [[ $BATCH == "LSF" ]]; then
 DEFAULTQUEUE=1nh
-BATCHQUERY="bjobs"
 fi
-
 ####################################################
 ################## SIGNAL F-TEST ###################
 ####################################################
-if [ -e dat/newConfig_${EXT}XXXX.dat ]; then
+#ls dat/newConfig_${EXT}.dat
+if [ -e dat/newConfig_${EXT}.dat ]; then
   echo "[INFO] sigFTest dat file $OUTDIR/dat/copy_newConfig_${EXT}.dat already exists, so SKIPPING SIGNAL FTEST"
 else
   if [ $FTESTONLY == 1 ]; then
@@ -148,11 +141,13 @@ else
   fi
   echo "[INFO] sigFTest jobs completed, check output and do:"
   echo "cp $PWD/dat/newConfig_${EXT}_temp.dat $PWD/dat/newConfig_${EXT}.dat"
-  echo "and manually amend chosen number of gaussians using the output pdfs."
+  echo "and manually amend chosen number of gaussians using the output pdfs here:"
+	echo "Signal/outdir_${EXT}/sigfTest/"
   echo "then re-run the same command to continue !"
   CALCPHOSYSTONLY=0
   SIGFITONLY=0
   SIGPLOTSONLY=0
+	exit 1
 fi
 ####################################################
 ################## CALCPHOSYSTCONSTS ###################
@@ -180,12 +175,12 @@ if [ $SIGFITONLY == 1 ]; then
   echo "=============================="
 
 
-  if [ "$BATCH" == "" ]; then
+  if [[ $BATCH == "" ]]; then
     echo "./bin/SignalFit -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 -s dat/photonCatSyst_$EXT.dat --procs $PROCS -o $OUTDIR/CMS-HGG_mva_13TeV_sigfit.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI "
     ./bin/SignalFit -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 -s dat/photonCatSyst_$EXT.dat --procs $PROCS -o $OUTDIR/CMS-HGG_mva_13TeV_sigfit.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI #--pdfWeights 26
   else
     echo " ./python/submitSignalFit.py -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 -s dat/photonCatSyst_$EXT.dat --procs $PROCS -o $OUTDIR/CMS-HGG_sigfit_$EXT.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI --batch $BATCH -q $DEFAULTQUEUE "
-    ./python/submitSignalFit.py -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 -s dat/photonCatSyst_$EXT.dat --procs $PROCS -o $OUTDIR/CMS-HGG_sigfit_$EXT.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI --batch $BATCH -q $DEFAULTQUEUE 
+    ./python/submitSignalFit.py -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 -s dat/photonCatSyst_$EXT.dat --procs $PROCS -o $OUTDIR/CMS-HGG_sigfit_$EXT.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI --batch $BATCH -q $DEFAULTQUEUE
 
     PEND=`ls -l $OUTDIR/sigfit/SignalFitJobs/sub*| grep -v "\.run" | grep -v "\.done" | grep -v "\.fail" | grep -v "\.err" |grep -v "\.log"  |wc -l`
     echo "PEND $PEND"
@@ -237,6 +232,7 @@ echo "-->Create Validation plots"
 echo "=============================="
 
 echo " ./bin/makeParametricSignalModelPlots -i $OUTDIR/CMS-HGG_sigfit_$EXT.root  -o $OUTDIR -p $PROCS -f $CATS"
+#./bin/makeParametricSignalModelPlots -i $OUTDIR/CMS-HGG_sigfit_$EXT.root  -o $OUTDIR/sigplots -p $PROCS -f $CATS 
 ./bin/makeParametricSignalModelPlots -i $OUTDIR/CMS-HGG_sigfit_$EXT.root  -o $OUTDIR/sigplots -p $PROCS -f $CATS > signumbers.txt
 #mv $OUTDIR/sigfit/initialFits $OUTDIR/initialFits
 
@@ -248,7 +244,6 @@ cp ~lcorpe/public/index.php ~/www/$OUTDIR/sigplots/.
 cp ~lcorpe/public/index.php ~/www/$OUTDIR/systematics/.
 cp ~lcorpe/public/index.php ~/www/$OUTDIR/sigfit/.
 cp ~lcorpe/public/index.php ~/www/$OUTDIR/sigfTest/.
-cp ~lcorpe/public/index.php ~/www/$OUTDIR/initialFits/.
 
 echo "plots available at: "
 echo "https://lcorpe.web.cern.ch/lcorpe/$OUTDIR"
@@ -261,7 +256,6 @@ cp ~lc1113/index.php ~lc1113/public_html/$OUTDIR/sigplots/.
 cp ~lc1113/index.php ~lc1113/public_html/$OUTDIR/systematics/.
 cp ~lc1113/index.php ~lc1113/public_html/$OUTDIR/sigfit/.
 cp ~lc1113/index.php ~lc1113/public_html/$OUTDIR/sigfTest/.
-cp ~lc1113/index.php ~lc1113/public_html/$OUTDIR/initialFits/.
 echo "plots available at: "
 echo "http://www.hep.ph.imperial.ac.uk/~lc1113/$OUTDIR"
 fi

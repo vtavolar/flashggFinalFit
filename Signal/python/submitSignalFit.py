@@ -89,21 +89,6 @@ def system(exec_line):
   #if opts.verbose: print '\t', exec_line
   os.system(exec_line)
 
-
-#def strtodict(lstr):
-#  print "[INFO] string to dictionariy"
-#  retdict = {}
-#  if not len(lstr): return retdict
-#  objects = lstr.split(':')
-#  for o in objects:
-#    k,vs = o.split('[')
-#    vs = vs.rstrip(']')
-#    vs = vs.split(',')
-#    retdict[k] = [float(vs[0]),float(vs[1])]
-#  return retdict
-#
-#catRanges = strtodict(opts.catRanges)
-
 def writePreamble(sub_file):
   #print "[INFO] writing preamble"
   sub_file.write('#!/bin/bash\n')
@@ -117,13 +102,17 @@ def writePreamble(sub_file):
 def writePostamble(sub_file, exec_line):
 
   #print "[INFO] writing to postamble"
+  sub_file.write('\t echo "PREPARING TO RUN "\n')
   sub_file.write('if ( %s ) then\n'%exec_line)
   #sub_file.write('\t mv higgsCombine*.root %s\n'%os.path.abspath(opts.outDir))
+  sub_file.write('\t echo "DONE" \n')
   sub_file.write('\t touch %s.done\n'%os.path.abspath(sub_file.name))
   sub_file.write('else\n')
+  sub_file.write('\t echo "FAIL" \n')
   sub_file.write('\t touch %s.fail\n'%os.path.abspath(sub_file.name))
   sub_file.write('fi\n')
   sub_file.write('cd -\n')
+  sub_file.write('\t echo "RM RUN "\n')
   sub_file.write('rm -f %s.run\n'%os.path.abspath(sub_file.name))
   sub_file.write('rm -rf scratch_$number\n')
   sub_file.close()
@@ -134,7 +123,9 @@ def writePostamble(sub_file, exec_line):
     system('rm -f %s.log'%os.path.abspath(sub_file.name))
     system('rm -f %s.err'%os.path.abspath(sub_file.name))
     if (opts.batch == "LSF") : system('bsub -q %s -o %s.log %s'%(opts.queue,os.path.abspath(sub_file.name),os.path.abspath(sub_file.name)))
-    if (opts.batch == "IC") : system('qsub -q %s -o %s.log -e %s.err %s > out.txt'%(opts.queue,os.path.abspath(sub_file.name),os.path.abspath(sub_file.name),os.path.abspath(sub_file.name)))
+    if (opts.batch == "IC") : 
+      system('qsub -q %s -o %s.log -e %s.err %s'%(opts.queue,os.path.abspath(sub_file.name),os.path.abspath(sub_file.name),os.path.abspath(sub_file.name)))
+      #print "system(",'qsub -q %s -o %s.log -e %s.err %s '%(opts.queue,os.path.abspath(sub_file.name),os.path.abspath(sub_file.name),os.path.abspath(sub_file.name)),")"
   if opts.runLocal:
      system('bash %s'%os.path.abspath(sub_file.name))
 
@@ -151,7 +142,7 @@ for proc in  opts.procs.split(","):
     file = open('%s/SignalFitJobs/sub%d.sh'%(opts.outDir,counter),'w')
     writePreamble(file)
     counter =  counter+1
-    exec_line = "%s/bin/SignalFit --verbose 1 -i %s -d %s/%s  --mhLow=%s --mhHigh=%s -s %s/%s --procs %s -o  %s/%s -p %s/%s -f %s --changeIntLumi %s --binnedFit 1 --nBins 320 --split %s,%s" %(os.getcwd(), opts.infile,os.getcwd(),opts.datfile,opts.mhLow, opts.mhHigh, os.getcwd(),opts.systdatfile, opts.procs,os.getcwd(),opts.outfilename.replace(".root","_%s_%s.root"%(proc,cat)), os.getcwd(),opts.outDir, opts.flashggCats ,opts.changeIntLumi, proc,cat)
+    exec_line = "%s/bin/SignalFit --verbose 0 -i %s -d %s/%s  --mhLow=%s --mhHigh=%s -s %s/%s --procs %s -o  %s/%s -p %s/%s -f %s --changeIntLumi %s --binnedFit 1 --nBins 320 --split %s,%s" %(os.getcwd(), opts.infile,os.getcwd(),opts.datfile,opts.mhLow, opts.mhHigh, os.getcwd(),opts.systdatfile, opts.procs,os.getcwd(),opts.outfilename.replace(".root","_%s_%s.root"%(proc,cat)), os.getcwd(),opts.outDir, opts.flashggCats ,opts.changeIntLumi, proc,cat)
     #exec_line = "%s/bin/SignalFit -i %s  -p %s -f %s --considerOnly %s -o %s/%s --datfilename %s/%s/SignalFitJobs/outputs/config_%d.dat" %(os.getcwd(), opts.infile,proc,opts.flashggCats,cat,os.getcwd(),opts.outDir,os.getcwd(),opts.outDir, counter)
     #print exec_line
     writePostamble(file,exec_line)

@@ -1,15 +1,11 @@
 #!/bin/bash
 
-
 #bash variables
 FILE="";
 EXT="auto"; #extensiom for all folders and files created by this script
 PROCS="ggh"
-#CATS="UntaggedTag_0,UntaggedTag_1,UntaggedTag_2,UntaggedTag_3,UntaggedTag_4,VBFTag_0,VBFTag_1,VBFTag_2,TTHHadronicTag,TTHLeptonicTag,VHHadronicTag,VHTightTag,VHLooseTag,VHEtTag"
-#CATS="UntaggedTag_0,UntaggedTag_1,UntaggedTag_2,UntaggedTag_3,UntaggedTag_4,VBFTag_0,VBFTag_1,VBFTag_2,TTHLeptonicTag,VHHadronicTag,VHTightTag,VHLooseTag"
 CATS="UntaggedTag_0,UntaggedTag_1,UntaggedTag_2,UntaggedTag_3,UntaggedTag_4,VBFTag_0,VBFTag_1,VBFTag_2,VHHadronicTag,VHTightTag,VHLooseTag"
 SCALES="HighR9EE,LowR9EE,HighR9EB,LowR9EB"
-#SMEARS="HighR9EE,LowR9EE,HighR9EBRho,LowR9EBRho,HighR9EBPhi,LowR9EBPhi"
 SMEARS="HighR9EE,LowR9EE,HighR9EB,LowR9EB" #DRY RUN
 FTESTONLY=0
 PSEUDODATAONLY=0
@@ -39,6 +35,7 @@ echo "--seed) for pseudodata random number gen seed (default $SEED)"
 echo "--intLumi) specified in fb^-{1} (default $INTLUMI)) "
 echo "--isData) specified in fb^-{1} (default $DATA)) "
 echo "--unblind) specified in fb^-{1} (default $UNBLIND)) "
+		echo "--batch) which batch system to use (None (''),LSF,IC) (default '$BATCH')) "
 }
 
 
@@ -46,7 +43,7 @@ echo "--unblind) specified in fb^-{1} (default $UNBLIND)) "
 
 
 # options may be followed by one colon to indicate they have a required argument
-if ! options=$(getopt -u -o hi:p:f: -l help,inputFile:,procs:,flashggCats:,ext:,fTestOnly,pseudoDataOnly,bkgPlotsOnly,pseudoDataDat:,sigFile:,seed:,intLumi:,unblind,isData -- "$@")
+if ! options=$(getopt -u -o hi:p:f: -l help,inputFile:,procs:,flashggCats:,ext:,fTestOnly,pseudoDataOnly,bkgPlotsOnly,pseudoDataDat:,sigFile:,seed:,intLumi:,unblind,isData,batch: -- "$@")
 then
 # something went wrong, getopt will put out an error message for us
 exit 1
@@ -70,6 +67,7 @@ case $1 in
 --intLumi) INTLUMI=$2; shift;;
 --isData) ISDATA=1;;
 --unblind) UNBLIND=1;;
+--batch) BATCH=$2; shift;;
 
 (--) shift; break;;
 (-*) usage; echo "$0: error - unrecognized option $1" 1>&2; usage >> /dev/stderr; exit 1;;
@@ -81,10 +79,6 @@ done
 
 OUTDIR="outdir_${EXT}"
 echo "[INFO] outdir is $OUTDIR, INTLUMI $INTLUMI" 
-#if [ "$FILE" == "" ];then
-#	echo "ERROR, input file (--inputFile or -i) is mandatory!"
-#	exit 0
-#fi
 
 if [ $ISDATA == 1 ]; then
 DATAEXT="-Data"
@@ -99,6 +93,15 @@ if [ $FTESTONLY == 0 -a $PSEUDODATAONLY == 0 -a $BKGPLOTSONLY == 0 ]; then
 FTESTONLY=1
 PSEUDODATAONLY=1
 BKGPLOTSONLY=1
+fi
+
+if [[ $BATCH == "IC" ]]; then
+DEFAULTQUEUE=hepshort.q
+BATCHQUERY=qstat
+fi
+if [[ $BATCH == "LSF" ]]; then
+DEFAULTQUEUE=1nh
+BATCHQUERY=bjobs
 fi
 
 ####################################################
@@ -141,7 +144,7 @@ OPT=" --isData 1"
 fi
 
 echo " ./bin/fTest -i $FILE --saveMultiPdf CMS-HGG_multipdf_$EXT.root  -D $OUTDIR/bkgfTest$DATAEXT -f $CATS $OPT"
-./bin/fTest -i $FILE --saveMultiPdf CMS-HGG_multipdf_$EXT.root  -D $OUTDIR/bkgfTest$DATAEXT -f $CATS $OPT
+./bin/fTest -i $FILE --saveMultiPdf CMS-HGG_multipdf_$EXT.root  -D $OUTDIR/bkgfTest$DAf TAEXT -f $CATS $OPT
 
 OPT=""
 fi
@@ -161,16 +164,17 @@ fi
 if [ $UNBLIND == 1 ]; then
 OPT=" --unblind"
 fi
-echo "./scripts/subBkgPlots.py -b CMS-HGG_multipdf_$EXT.root -d $OUTDIR/bkgPlots$DATAEXT -S 13 --isMultiPdf --useBinnedData  --doBands --massStep 2 $SIG -L 100 -H 180 -f $CATS -l $CATS --intLumi $INTLUMI $OPT --batch IC -q hepmedium.q #for now"
-./scripts/subBkgPlots.py -b CMS-HGG_multipdf_$EXT.root -d $OUTDIR/bkgPlots$DATAEXT -S 13 --isMultiPdf --useBinnedData  --doBands  --massStep 2 $SIG -L 100 -H 180 -f $CATS -l $CATS --intLumi $INTLUMI $OPT --batch IC -q hepmedium.q #for now
-continueLoop=0
-while (($continueLoop==0))
+echo "./scripts/subBkgPlots.py -b CMS-HGG_multipdf_$EXT.root -d $OUTDIR/bkgPlots$DATAEXT -S 13 --isMultiPdf --useBinnedData  --doBands --massStep 1 $SIG -L 100 -H 180 -f $CATS -l $CATS --intLumi $INTLUMI $OPT --batch $BATCH -q $DEFAULTQUEUE "
+./scripts/subBkgPlots.py -b CMS-HGG_multipdf_$EXT.root -d $OUTDIR/bkgPlots$DATAEXT -S 13 --isMultiPdf --useBinnedData  --doBands  --massStep 1 $SIG -L 100 -H 180 -f $CATS -l $CATS --intLumi $INTLUMI $OPT --batch $BATCH -q $DEFAULTQUEUE
+continueLoop=1
+while (($continueLoop==1))
 do
  sleep 10
- qstat
- qstat >qstat_out.txt
- ((number= `cat qstat_out.txt | wc -l `))
-  if (( $number==0)) ; then
+ $BATCHQUERY
+ $BATCHQUERY >qstat_out.txt
+ ((number=`cat qstat_out.txt | wc -l `))
+ echo $number
+  if (($number==0)) ; then
      ((continueLoop=0))
   fi
 done 
