@@ -110,6 +110,11 @@ DEFAULTQUEUE=1nh
 #DEFAULTQUEUE=hepmedium.q
 BATCHOPTION=" --batch $BATCH"
 fi
+if [[ $BATCH == "T3CH" ]]; then
+DEFAULTQUEUE=all.q
+#DEFAULTQUEUE=hepmedium.q
+BATCHOPTION=" --batch $BATCH"
+fi
 
 echo "[INFO] INTLUMI $INTLUMI"
 
