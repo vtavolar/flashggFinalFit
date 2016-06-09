@@ -483,7 +483,7 @@ int main(int argc, char *argv[]){
 			// photon scales not correlated ....
 			if (photonCatScalesStr_.size()!=0){
 				for (vector<string>::iterator phoCat=photonCatScales_.begin(); phoCat!=photonCatScales_.end(); phoCat++){
-
+				        if(verbosity_)cout<<"photonCatScale "<<phoCat->c_str()<<endl;
 					// this is to ensure nominal comes from the right file
 					vector<TH1F*> hists;
 					if (isFlashgg_){
