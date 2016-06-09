@@ -93,13 +93,17 @@ fi
 if [[ $BATCH == "LSF" ]]; then
 DEFAULTQUEUE=1nh
 fi
+if [[ $BATCH == "T3CH" ]]; then
+DEFAULTQUEUE=all.q
+fi
 ####################################################
 ################## SIGNAL F-TEST ###################
 ####################################################
 #ls dat/newConfig_${EXT}.dat
-if [ -e dat/newConfig_${EXT}.dat ]; then
-  echo "[INFO] sigFTest dat file $OUTDIR/dat/copy_newConfig_${EXT}.dat already exists, so SKIPPING SIGNAL FTEST"
+if [ -e ${OUTDIR}/dat/newConfig_${EXT}.dat ]; then
+  echo "[INFO] sigFTest dat file $OUTDIR/dat/newConfig_${EXT}.dat already exists, so SKIPPING SIGNAL FTEST"
 else
+  echo "[INFO] sigFTest dat file $OUTDIR/dat/newConfig_${EXT}.dat  DOES NOT already exist, so PERFORMING SIGNAL FTEST"
   if [ $FTESTONLY == 1 ]; then
     mkdir -p $OUTDIR/fTest
     echo "=============================="
