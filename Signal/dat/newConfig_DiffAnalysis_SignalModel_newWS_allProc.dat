@@ -1,0 +1,28 @@
+#proc cat nGausRV nGausWV
+ggh SigmaMpTTag_0 3 3
+ggh SigmaMpTTag_1 2 -1 ggh SigmaMpTTag_0
+ggh SigmaMpTTag_2 -1 -1 ggh SigmaMpTTag_1
+ggh SigmaMpTTag_3 3 3
+ggh SigmaMpTTag_4 3 -1 ggh SigmaMpTTag_3
+ggh SigmaMpTTag_5 -1 -1 ggh SigmaMpTTag_4
+ggh SigmaMpTTag_6 3 2
+ggh SigmaMpTTag_7 2 -1 ggh SigmaMpTTag_6
+ggh SigmaMpTTag_8 -1 -1 ggh SigmaMpTTag_7
+tth SigmaMpTTag_0 -1 -1 vbf SigmaMpTTag_0
+tth SigmaMpTTag_1 -1 -1 vbf SigmaMpTTag_1
+tth SigmaMpTTag_2 -1 -1 vbf SigmaMpTTag_2
+tth SigmaMpTTag_3 -1 -1 vbf SigmaMpTTag_3
+tth SigmaMpTTag_4 -1 -1 vbf SigmaMpTTag_4
+tth SigmaMpTTag_5 -1 -1 vbf SigmaMpTTag_5
+tth SigmaMpTTag_6 -1 -1 vbf SigmaMpTTag_6
+tth SigmaMpTTag_7 -1 -1 vbf SigmaMpTTag_7
+tth SigmaMpTTag_8 -1 -1 vbf SigmaMpTTag_8
+vbf SigmaMpTTag_0 4 3
+vbf SigmaMpTTag_1 3 3
+vbf SigmaMpTTag_2 3 -1
+vbf SigmaMpTTag_3 3 3
+vbf SigmaMpTTag_4 3 -1
+vbf SigmaMpTTag_5 3 -1
+vbf SigmaMpTTag_6 3 3
+vbf SigmaMpTTag_7 3 -1
+vbf SigmaMpTTag_8 2 -1
