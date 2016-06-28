@@ -38,6 +38,7 @@ class WSTFileWrapper:
         f = r.TFile.Open(fn) 
         self.fileList.append(f)
         thing = f.Get(wsname)
+        thing.Print()
         self.wsList.append(self.fileList[-1].Get(wsname))
         f.Close()
 
@@ -112,9 +113,12 @@ outFile = open(options.outfilename,'w')
 ## PROCS HANDLING & DICT ######################################################
 ###############################################################################
 # convert flashgg style to combine style process
-combProc = {'ggH':'ggH','VBF':'qqH','ggh':'ggH','vbf':'qqH','wzh':'VH','wh':'WH','zh':'ZH','tth':'ttH','bkg_mass':'bkg_mass','gg_grav':'ggH_ALT','qq_grav':'qqbarH_ALT'}
-flashggProc = {'ggH':'ggh','qqH':'vbf','VH':'wzh','WH':'wh','ZH':'zh','ttH':'tth','bkg_mass':'bkg_mass','ggH_ALT':'gg_grav','qqbarH_ALT':'qq_grav'}
-procId = {'ggH':0,'qqH':-1,'VH':-2,'WH':-2,'ZH':-3,'ttH':-4,'ggH_ALT':-5,'qqbarH_ALT':-6,'bkg_mass':1}
+#combProc = {'ggH':'ggH','VBF':'qqH','ggh':'ggH','vbf':'qqH','wzh':'VH','wh':'WH','zh':'ZH','tth':'ttH','bkg_mass':'bkg_mass','gg_grav':'ggH_ALT','qq_grav':'qqbarH_ALT'}
+combProc = {'InsideAcceptance':'InsideAcceptance', 'OutsideAcceptance':'OutsideAcceptance', 'bkg_mass':'bkg_mass'}
+#flashggProc = {'ggH':'ggh','qqH':'vbf','VH':'wzh','WH':'wh','ZH':'zh','ttH':'tth','bkg_mass':'bkg_mass','ggH_ALT':'gg_grav','qqbarH_ALT':'qq_grav'}
+flashggProc = {'InsideAcceptance':'InsideAcceptance', 'OutsideAcceptance':'OutsideAcceptance', 'bkg_mass':'bkg_mass'}
+#procId = {'ggH':0,'qqH':-1,'VH':-2,'WH':-2,'ZH':-3,'ttH':-4,'ggH_ALT':-5,'qqbarH_ALT':-6,'bkg_mass':1}
+procId = {'InsideAcceptance':0,'OutsideAcceptance':-1,'bkg_mass':1}
 bkgProcs = ['bkg_mass'] #what to treat as background
 #Determine if VH or WZH
 splitVH=False
@@ -196,6 +200,7 @@ else: options.globalScalesCorr = options.globalScalesCorr.split(',')
 ###############################################################################
 ## OPEN WORKSPACE AND EXTRACT INFO # ##########################################
 sqrts=13
+print options.infilename
 inWS = WSTFileWrapper(options.infilename,"tagsDumper/cms_hgg_%sTeV"%sqrts)
 #inWS = inFile.Get('wsig_13TeV')
 #if (inWS==None) : inWS = inFile.Get('tagsDumper/cms_hgg_%sTeV'%sqrts)
@@ -223,6 +228,9 @@ fileDetails['data_obs'] = [dataFile,dataWS,'roohist_data_mass_$CHANNEL']
 fileDetails['bkg_mass']  = [bkgFile,bkgWS,'CMS_hgg_$CHANNEL_%dTeV_bkgshape'%sqrts]
 fileDetails['ggH']       = [sigFile.replace('$PROC',"ggh"),sigWS,'hggpdfsmrel_%dTeV_ggh_$CHANNEL'%sqrts]
 fileDetails['qqH']       = [sigFile.replace('$PROC',"vbf"),sigWS,'hggpdfsmrel_%dTeV_vbf_$CHANNEL'%sqrts]
+fileDetails['InsideAcceptance']       = [sigFile.replace('$PROC',"InsideAcceptance"),sigWS,'hggpdfsmrel_%dTeV_InsideAcceptance_$CHANNEL'%sqrts]
+fileDetails['OutsideAcceptance']       = [sigFile.replace('$PROC',"OutsideAcceptance"),sigWS,'hggpdfsmrel_%dTeV_OutsideAcceptance_$CHANNEL'%sqrts]
+fileDetails['qqH']       = [sigFile.replace('$PROC',"vbf"),sigWS,'hggpdfsmrel_%dTeV_vbf_$CHANNEL'%sqrts]
 if splitVH:
   fileDetails['WH']       =  [sigFile.replace('$PROC',"wh"),sigWS,'hggpdfsmrel_%dTeV_wh_$CHANNEL'%sqrts]
   fileDetails['ZH']       =  [sigFile.replace('$PROC',"zh"),sigWS,'hggpdfsmrel_%dTeV_zh_$CHANNEL'%sqrts]
@@ -244,7 +252,8 @@ theorySyst['pdfWeight'] = [0,60,"sym"]
 
 theorySystAbsScale={}
 theorySystAbsScale['names'] = ["QCDscale_qqbar_up","QCDscale_gg_up","QCDscale_qqbar_down","QCDscale_gg_down","pdf_alphaS_qqbar","pdf_alphaS_gg","pdf_qqbar","pdf_gg","alphaS_qqbar","alphaS_gg"] #QCD scale up, QCD scale down, PDF+alpha S, PDF, alpha S 
-theorySystAbsScale['names_to_consider'] = ["QCDscale_qqbar_up","QCDscale_gg_up","QCDscale_qqbar_down","QCDscale_gg_down","pdf_alphaS_qqbar","pdf_alphaS_gg"] #QCD scale up, QCD scale down, PDF+alpha S, PDF, alpha S 
+#theorySystAbsScale['names_to_consider'] = ["QCDscale_qqbar_up","QCDscale_gg_up","QCDscale_qqbar_down","QCDscale_gg_down","pdf_alphaS_qqbar","pdf_alphaS_gg"] #QCD scale up, QCD scale down, PDF+alpha S, PDF, alpha S 
+theorySystAbsScale['names_to_consider'] = []
 theorySystAbsScale['ggH'] = [0.0,0.076,0.0,-0.081,0.0,0.031,0,0,0.018,0,0,0.025] # GGH is a _gg process
 theorySystAbsScale['qqH'] = [0.004,0.0,-0.003,0.0,0.021,0.0,0.021,0.0,0.005,0.0] # VBF is a _qqbar process 
 theorySystAbsScale['WH'] = [0.005,0.0,-0.007,0.0,0.019,0.0,0.017,0.0,0.009,0.0] # WZH is a _qqbar process, cporrelated with VBF
@@ -269,7 +278,8 @@ def printTheorySysts():
               outFile.write('- ')
               continue
             else:
-              outFile.write(getFlashggLineTheoryEnvelope(flashggProc[p],c,systName,systDetails))
+               print "blablabla"
+             #xs outFile.write(getFlashggLineTheoryEnvelope(flashggProc[p],c,systName,systDetails))
         outFile.write('\n')
     else: #sym or asym uncertainties
       #print "consider ", systName
@@ -281,6 +291,8 @@ def printTheorySysts():
           if (not options.justThisSyst=="Theory"): continue
         if (i%1==0) : print "[INFO] processing ", name
         outFile.write('%-35s  lnN   '%(name))
+        print "CATEGORIES"
+        print options.cats
         for c in options.cats:
           for p in options.procs:
             if "bkg" in flashggProc[p] : 
@@ -333,21 +345,26 @@ def getFlashggLineTheoryWeights(proc,cat,name,i,asymmetric):
     ad_hoc_factor=1.5
     m = n+1
   if (options.theoryNormFactors != ""):
+     print proc,name.replace("Weight","")
      values = eval("th_norm.%s_%s"%(proc,name.replace("Weight","")))
      #print ("th_norm.%s_%s"%(proc,name.replace("Weight","")))
      theoryNormFactor_n= 1/values[n] #up
      theoryNormFactor_m= 1/values[m] #down
   
   mass = inWS.var("CMS_hgg_mass")
+  mass.Print()
   weight = r.RooRealVar("weight","weight",0)
   weight_up = inWS.var("%s_%d"%(name,n))
   weight_down = inWS.var("%s_%d"%(name,m))
   weight_central = inWS.var("centralObjectWeight") 
   weight_sumW = inWS.var("sumW") 
   #data_nominal = inWS.data("%s_%d_13TeV_%s"%(proc,options.mass,cat))
-  data_nominal= inWS.data("%s_%d_13TeV_%s_pdfWeights"%(proc,options.mass,cat))
+  print options.infilename
+  print "%s_%d_13TeV_%s"%(proc,options.mass,cat)
+#  data_nominal= inWS.data("%s_%d_13TeV_%s_pdfWeights"%(proc,options.mass,cat))
+  data_nominal= inWS.data("%s_%d_13TeV_%s"%(proc,options.mass,cat))
   data_nominal_sum = data_nominal.sumEntries()
-  if (data_nominal_sum <= 0.):
+  if (data_nominal_sum <= 0. or 1): ###WARNING: quick and dirty fix to skip pdf weight part
       print "[WARNING] This dataset has 0 or negative sum of weight. Systematic calulcxation meaningless, so list as '- '"
       line = '- '
       return line
@@ -695,13 +712,14 @@ def printPreamble():
 def printFileOptions():
   print '[INFO] File opts...'
   for typ, info in fileDetails.items():
-    for c in options.cats:
-      file = info[0].replace('$CAT','%s'%c)
-      wsname = info[1]
-      pdfname = info[2].replace('$CHANNEL','%s'%c)
-      if typ not in options.procs and typ!='data_obs': continue
+     print "wiritng shapes into datacard for ",typ, info
+     for c in options.cats:
+        file = info[0].replace('$CAT','%s'%c)
+        wsname = info[1]
+        pdfname = info[2].replace('$CHANNEL','%s'%c)
+        if typ not in options.procs and typ!='data_obs': continue
       #outFile.write('shapes %-10s %-15s %-30s %-30s\n'%(typ,'%s_%dTeV'%(c,sqrts),file.replace(".root","_%s_%s.root"%(typ,c)),wsname+':'+pdfname))
-      outFile.write('shapes %-10s %-15s %-30s %-30s\n'%(typ,'%s_%dTeV'%(c,sqrts),file,wsname+':'+pdfname))
+        outFile.write('shapes %-10s %-15s %-30s %-30s\n'%(typ,'%s_%dTeV'%(c,sqrts),file,wsname+':'+pdfname))
   outFile.write('\n')
 ###############################################################################
 
