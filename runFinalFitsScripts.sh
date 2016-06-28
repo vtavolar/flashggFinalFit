@@ -190,8 +190,10 @@ echo "------------> Create DATACARD"
 echo "------------------------------------------------"
 
 cd Datacard
-echo "./makeParametricModelDatacardFLASHgg.py -i $FILE  -o Datacard_13TeV_${EXT}.txt -p $PROCS -c UntaggedTag_0,UntaggedTag_1,UntaggedTag_2,UntaggedTag_3,VBFTag_0,VBFTag_1,TTHHadronicTag,TTHLeptonicTag --photonCatScales $SCALES --photonCatSmears $SMEARS --isMultiPdf --mass 125 --theoryNormFactors norm_factors.py #--submitSelf #--intLumi $INTLUMI"
-./makeParametricModelDatacardFLASHgg.py -i $FILE  -o Datacard_13TeV_${EXT}.txt -p $PROCS -c UntaggedTag_0,UntaggedTag_1,UntaggedTag_2,UntaggedTag_3,VBFTag_0,VBFTag_1,TTHHadronicTag,TTHLeptonicTag --photonCatScales $SCALES --photonCatSmears $SMEARS --isMultiPdf --mass 125 --theoryNormFactors norm_factors.py #--submitSelf #--intLumi $INTLUMI
+#echo "./makeParametricModelDatacardFLASHgg.py -i $FILE  -o Datacard_13TeV_${EXT}.txt -p $PROCS -c SigmaMpTTag_0,SigmaMpTTag_1,SigmaMpTTag_2 --photonCatScales $SCALES --photonCatSmears $SMEARS --isMultiPdf --mass 125 --theoryNormFactors norm_factors.py #--submitSelf #--intLumi $INTLUMI"
+./makeParametricModelDatacardFLASHgg.py -i $FILE  -o Datacard_13TeV_${EXT}.txt -p $PROCS -c SigmaMpTTag_0,SigmaMpTTag_1,SigmaMpTTag_2 --photonCatScales $SCALES --photonCatSmears #$SMEARS --isMultiPdf --mass 125 --theoryNormFactors norm_factors.py #--submitSelf #--intLumi $INTLUMI
+echo "./makeParametricModelDatacardFLASHgg.py -i $FILE  -o Datacard_13TeV_${EXT}.txt -p $PROCS -c SigmaMpTTag_0,SigmaMpTTag_1,SigmaMpTTag_2 --photonCatScales $SCALES --photonCatSmears $SMEARS --isMultiPdf --mass 125 #--theoryNormFactors norm_factors.py #--submitSelf #--intLumi $INTLUMI"
+./makeParametricModelDatacardFLASHgg.py -i $FILE  -o Datacard_13TeV_${EXT}.txt -p $PROCS -c SigmaMpTTag_0,SigmaMpTTag_1,SigmaMpTTag_2 --photonCatScales $SCALES --photonCatSmears $SMEARS --isMultiPdf --mass 125 #--theoryNormFactors norm_factors.py #--submitSelf #--intLumi $INTLUMI
 cd -
 fi
 
