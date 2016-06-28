@@ -140,6 +140,8 @@ if opts.parallel:
 
 if not opts.files and opts.datacard:
     opts.files = getFilesFromDatacard(opts.datacard)
+    print "Here are the files"
+    print opt.files
 
 defaults = copy(opts)
 print "INFO - queue ", opts.queue
