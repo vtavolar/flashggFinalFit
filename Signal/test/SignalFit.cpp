@@ -88,10 +88,10 @@ vector<string>  split_;
 string  splitStr_;
 float newIntLumi_;
 float originalIntLumi_;
-string referenceProc_="ggh";
-string referenceProcWV_="ggh";
-string referenceProcTTH_="tth";
-string referenceTagWV_="SigmaMpTTag_3";
+string referenceProc_="InsideAcceptance";
+string referenceProcWV_="InsideAcceptance";
+string referenceProcTTH_="InsideAcceptance";
+string referenceTagWV_="SigmaMpTTag_1";
 string referenceTagRV_="UntaggedTag_2";
 vector<string> map_proc_;
 vector<string> map_cat_;
@@ -351,7 +351,7 @@ int main(int argc, char *argv[]){
   // need to make this configurable ?! -LC
   referenceProc_="ggh";
   referenceProcTTH_="tth";
-  referenceTagWV_="SigmaMpTTag_3"; // histest stats WV is ggh Untagged 3. 
+  referenceTagWV_="SigmaMpTTag_1"; // histest stats WV is ggh Untagged 3. 
   referenceTagRV_="UntaggedTag_2"; // fairly low resolution tag even for ggh, more approprioate as te default than re-using the original tag.
   // are WV which needs to borrow should be taken from here
   
@@ -601,10 +601,12 @@ int main(int argc, char *argv[]){
 	std::cout << "[INFO] too few entries to use for fits in RV! nEntries " << nEntriesRV << " sumEntries " << sEntriesRV << "userSkipRV " << userSkipRV<< std::endl;
 	isProblemCategory=true;
         
+	std::cout<<"proc, cat: "<<proc<<", "<<cat<<std::endl;
 	int thisProcCatIndex = getIndexOfReferenceDataset(proc,cat);
         
 	string replancementProc = map_replacement_proc_[thisProcCatIndex];
 	string replancementCat = map_replacement_cat_[thisProcCatIndex];
+	std::cout<<"repl proc, repl cat: "<<replancementProc<<", "<<replancementCat<<std::endl;
 	int replacementIndex = getIndexOfReferenceDataset(replancementProc,replancementCat);
 	nGaussiansRV= map_nG_rv_[replacementIndex]; // if ==-1, want it to stay that way!
 	std::cout << "[INFO] try to use  dataset for " << replancementProc << ", " << replancementCat << " instead."<< std::endl;
@@ -640,6 +642,7 @@ int main(int argc, char *argv[]){
         
 	// //things are simpler this time, since almost all WV are bad aside from ggh-UntaggedTag3
 	// //and anyway the shape of mgg in the WV shoudl be IDENTICAL across all Tags.
+	std::cout<<"reference replacement :"<<referenceProcWV_<<", "<<referenceTagWV_<<std::endl;
 	int replacementIndex = getIndexOfReferenceDataset(referenceProcWV_,referenceTagWV_);
 	
 	////VRT, 3.6.2016: for differentials, it's probably better to have a WV reference for each group of sigmaM/M cats, thus we use ad hoc replacementcat/proc instead of references
