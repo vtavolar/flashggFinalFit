@@ -104,6 +104,11 @@ DEFAULTQUEUE=1nh
 BATCHQUERY=bjobs
 fi
 
+if [[ $BATCH == "T3CH" ]]; then
+DEFAULTQUEUE=all.q
+BATCHQUERY=qstat
+fi
+
 ####################################################
 ################## PSEUDODATAONLY ###################
 ####################################################
