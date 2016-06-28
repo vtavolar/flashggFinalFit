@@ -63,6 +63,7 @@ parser.add_option("-v","--verbose",dest="verbose",default=False,action="store_tr
 parser.add_option("-b","--batch",dest="batch",default=False,action="store_true")
 parser.add_option("--it",dest="it",type="string",help="if using superloop, index of iteration")
 parser.add_option("--itLedger",dest="itLedger",type="string",help="ledger to keep track of values of each iteration if using superloop")
+parser.add_option("--scalex",dest="scalex",type="string",help="rescale x axis by a factor")
 (options,args)=parser.parse_args()
 
 print "[INFO] Processing Files :"
@@ -783,6 +784,8 @@ def plot1DNLL(returnErrors=False,xvar="", ext=""):
     for i in range(tree.GetEntries()):
       tree.GetEntry(i)
       xv = getattr(tree,x)
+      if options.scalex != '':
+        xv = xv*float(options.scalex)
       if (hasattr(tree,"MH")):
         lcMH = getattr(tree,"MH")
       else:
@@ -910,7 +913,8 @@ def plot1DNLL(returnErrors=False,xvar="", ext=""):
   elif options.method=='mu': 
     lat2.SetTextSize(0.045)
     lat2.SetTextAlign(11)
-    lat2.DrawLatex(0.17,0.78,"#hat{#mu} = %4.2f ^{#font[122]{+}%4.2f}_{#font[122]{-}%4.2f}"%(fit,eplus0,eminus0))
+#    lat2.DrawLatex(0.17,0.78,"#hat{#mu} = %4.2f ^{#font[122]{+}%4.2f}_{#font[122]{-}%4.2f}"%(fit,eplus0,eminus0))
+    lat2.DrawLatex(0.17,0.78,"#hat{#sigma}_{fid} = %4.1f ^{#font[122]{+}%4.1f}_{#font[122]{-}%4.1f} fb"%(fit,eplus0,eminus0))
   elif options.method=='rv': lat2.DrawLatex(0.5,0.85,"#hat{#mu}_{qqH+VH} = %4.2f ^{#font[122]{+}%4.2f}_{#font[122]{-}%4.2f}"%(fit,eplus0,eminus0))
   elif options.method=='rf': lat2.DrawLatex(0.5,0.85,"#hat{#mu}_{ggH+ttH} = %4.2f ^{#font[122]{+}%4.2f}_{#font[122]{-}%4.2f}"%(fit,eplus0,eminus0))
 
@@ -1049,6 +1053,7 @@ def plot2DNLL(xvar="RF",yvar="RV",xtitle="#mu_{ggH+ttH}",ytitle="#mu_{qqH+VH}"):
           factor=newContent/th2.GetBinContent(i,j) 
           th2.SetBinContent(i,j,newContent*factor)
         else:
+          print "is this else useful?"
         prevBin= th2.GetBinContent(i,j)
     ############## Simple spike killer ##########
 
