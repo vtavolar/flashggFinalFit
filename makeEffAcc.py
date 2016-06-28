@@ -142,7 +142,9 @@ class WSTFileWrapper:
 
 ###############################################################################
 
-procOrder=('ggh', 'vbf', 'wzh', 'wh', 'zh', 'tth')
+#procOrder=('ggh', 'vbf', 'wzh', 'wh', 'zh', 'tth')
+
+procOrder=('InsideAcceptance', 'OutsideAcceptance')
 
 adHocFactors={
   'ggh': 1.0,
@@ -151,6 +153,8 @@ adHocFactors={
   'wh': 1.0,
   'zh': 1.0,
   'tth': 1.0,
+  'InsideAcceptance':1.0,
+  'OutsideAcceptance':1.0
 }
 
 
@@ -202,9 +206,11 @@ systematics = ["TriggerWeight","MvaShift","MCScaleLowR9EB","MCScaleHighR9EB","MC
 Masses = range(120,135,5) 
 # -------------------------------------------------------------
 
-procs=["ggh","vbf","wh","zh","tth"]
+#procs=["ggh","vbf","wh","zh","tth"]
+procs=['InsideAcceptance', 'OutsideAcceptance']
 masses=[120.,125.,130.]
-cats=["UntaggedTag_0","UntaggedTag_1","UntaggedTag_2","UntaggedTag_3","VBFTag_0","VBFTag_1","TTHLeptonicTag","TTHHadronicTag"]
+#cats=["UntaggedTag_0","UntaggedTag_1","UntaggedTag_2","UntaggedTag_3","VBFTag_0","VBFTag_1","TTHLeptonicTag","TTHHadronicTag"]
+cats=["SigmaMpTTag_0","SigmaMpTTag_1","SigmaMpTTag_2"]
 sqrts = 13
 ws = WSTFileWrapper(sys.argv[1],"tagsDumper/cms_hgg_%sTeV"%sqrts)
 extraFile=sys.argv[2]
@@ -388,7 +394,7 @@ MG.GetXaxis().SetTitleOffset(0.7)
 MG.GetXaxis().SetRangeUser(120.1,129.9)
 #MG.GetXaxis().SetRangeUser(120.0,130)
 MG.GetYaxis().SetTitle("Efficiency #times Acceptance (%)")
-MG.GetYaxis().SetRangeUser(37.1,42.9)
+MG.GetYaxis().SetRangeUser(32.3,39.2)
 MG.GetYaxis().SetTitleSize(0.055)
 MG.GetYaxis().SetTitleOffset(0.7)
 mytext.DrawLatex(0.1,0.92,"#scale[1.15]{CMS} #bf{#it{Simulation Preliminary}}") #for some reason the bf is reversed??
