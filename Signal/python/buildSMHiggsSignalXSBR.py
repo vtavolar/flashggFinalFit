@@ -54,6 +54,7 @@ def Init13TeV():
   SM.makeXS("ttH","13TeV")#For now, should update FIXME
   SM.makeXS("WH","13TeV")#For now, should update FIXME
   SM.makeXS("ZH","13TeV")#For now, should update FIXME
+#  SM.makeXS("all","13TeV")#For now, should update FIXME
  # options.funcXSext = "14TeV" #For now, should update FIXME
   options.funcXSext = "13TeV" 
 
@@ -63,7 +64,8 @@ def getBR(mh):
  return funcBR.getVal()
  
 def getXS(mh,prod):
- 
+ print "getXS here"
+ print mh, prod
  mhVar.setVal(mh)
  funcXS = SM.modelBuilder.out.function("SM_XS_%s_%s"%(prod,options.funcXSext))
  return funcXS.getVal()

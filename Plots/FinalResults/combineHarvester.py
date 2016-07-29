@@ -93,7 +93,9 @@ specOpts.add_option("--datacard",default=None)
 specOpts.add_option("--files",default=None)
 specOpts.add_option("--outDir",default=None)
 specOpts.add_option("--method",default=None)
+specOpts.add_option("--catName",default="", type="string")
 specOpts.add_option("--expected",type="int",default=None)
+specOpts.add_option("--mh",type="float",default=None)
 specOpts.add_option("--mhLow",type="float",default=None)
 specOpts.add_option("--mhHigh",type="float",default=None)
 specOpts.add_option("--mhStep",type="float",default=None)
@@ -117,7 +119,7 @@ specOpts.add_option("--pointsperjob",type="int",default=1)
 specOpts.add_option("--expectSignal",type="float",default=None)
 specOpts.add_option("--expectSignalMass",type="float",default=None)
 specOpts.add_option("--splitChannels",default=None)
-specOpts.add_option("--profileMH",default=True)
+specOpts.add_option("--profileMH",default=False)
 specOpts.add_option("--toysFile",default=None)
 specOpts.add_option("--additionalOptions",default="",type="string")
 specOpts.add_option("--postFit",default=False,action="store_true",help="Use post-fit nuisances")
@@ -138,6 +140,8 @@ if opts.parallel:
 
 if not opts.files and opts.datacard:
     opts.files = getFilesFromDatacard(opts.datacard)
+    print "Here are the files"
+    print opt.files
 
 defaults = copy(opts)
 print "INFO - queue ", opts.queue
@@ -288,14 +292,15 @@ def makeNoGlobCard():
   outf.close()
   opts.datacard = newcardname 
 
-def writePreamble(sub_file):
+def writePreambleT3(sub_file):
   #print "[INFO] writing preamble"
   sub_file.write('#!/bin/bash\n')
   sub_file.write('touch %s.run\n'%os.path.abspath(sub_file.name))
   sub_file.write('cd %s\n'%os.getcwd())
-  sub_file.write('eval `scramv1 runtime -sh`\n')
+  sub_file.write('source $VO_CMS_SW_DIR/cmsset_default.sh')
+  sub_file.write('source /swshare/glite/external/etc/profile.d/grid-env.sh')
+#  sub_file.write('eval `scramv1 runtime -sh`\n')
   #sub_file.write('cd -\n')
-  if (opts.batch == "IC" ) : sub_file.write('cd $TMPDIR\n')
   sub_file.write('number=$RANDOM\n')
   sub_file.write('mkdir -p scratch_$number\n')
   sub_file.write('cd scratch_$number\n')
@@ -307,11 +312,44 @@ def writePreamble(sub_file):
   for file in opts.files.split(','):
     sub_file.write('cp -p %s .\n'%os.path.abspath(file))
 
+def writePreamble(sub_file):
+  #print "[INFO] writing preamble"
+  sub_file.write('#!/bin/bash\n')
+  sub_file.write('set -x\n')
+  sub_file.write('touch %s.run\n'%os.path.abspath(sub_file.name))
+  sub_file.write('cd %s\n'%os.getcwd())
+  if (opts.batch == "IC"):
+      sub_file.write('source $VO_CMS_SW_DIR/cmsset_default.sh\n')
+      sub_file.write('source /mnt/t3nfs01/data01/swshare/glite/external/etc/profile.d/grid-env.sh\n')
+      sub_file.write('export SCRAM_ARCH=slc6_amd64_gcc481\n')
+      sub_file.write('export LD_LIBRARY_PATH=/swshare/glite/d-cache/dcap/lib/:$LD_LIBRARY_PATH\n')
+  #if (opts.batch == "LSF"):
+  sub_file.write('set +x\n') 
+  sub_file.write('eval `scramv1 runtime -sh`\n')
+  sub_file.write('set -x\n') 
+  #sub_file.write('cd -\n')
+  if (opts.batch == "IC" ) : sub_file.write('cd $TMPDIR\n')
+  sub_file.write('number=$RANDOM\n')
+  sub_file.write('mkdir -p scratch_$number\n')
+  sub_file.write('cd scratch_$number\n')
+  sub_file.write('ls $CMSSW_BASE/bin/$SCRAM_ARCH/combine\n')
+  sub_file.write('cp -p $CMSSW_BASE/bin/$SCRAM_ARCH/combine .\n')
+  sub_file.write('cp -p %s .\n'%os.path.abspath(opts.datacard))
+  sub_file.write('mkdir /scratch/$USER\n')
+  if opts.toysFile: 
+    for f in opts.toysFile.split(','):
+      sub_file.write('cp -p %s .\n'%os.path.abspath(f))
+  for file in opts.files.split(','):
+    sub_file.write('cp -p %s .\n'%os.path.abspath(file))
+
 def writePostamble(sub_file, exec_line):
 
   #print "[INFO] writing to postamble"
   if opts.S0: exec_line += ' -S 0 '
+  if (opts.batch == "IC"):
+      exec_line += ' &> /scratch/$USER/wn_log.txt'
   sub_file.write('if ( %s ) then\n'%exec_line)
+  sub_file.write('\t cp /scratch/$USER/wn_log.txt %s\n'%os.path.abspath(opts.outDir))
   sub_file.write('\t mv higgsCombine*.root %s\n'%os.path.abspath(opts.outDir))
   sub_file.write('\t touch %s.done\n'%os.path.abspath(sub_file.name))
   sub_file.write('else\n')
@@ -327,7 +365,7 @@ def writePostamble(sub_file, exec_line):
     system('rm -f %s.fail'%os.path.abspath(sub_file.name))
     system('rm -f %s.log'%os.path.abspath(sub_file.name))
     if (opts.batch == "LSF") : system('bsub -q %s -o %s.log %s'%(opts.queue,os.path.abspath(sub_file.name),os.path.abspath(sub_file.name)))
-    if (opts.batch == "IC") : system('qsub -q %s -o %s.log -e %s.err %s > out.txt'%(opts.queue,os.path.abspath(sub_file.name),os.path.abspath(sub_file.name),os.path.abspath(sub_file.name)))
+    if (opts.batch == "IC") : system('qsub -l h_vmem=6g -q %s -o %s.log -e %s.err %s > out.txt'%(opts.queue,os.path.abspath(sub_file.name),os.path.abspath(sub_file.name),os.path.abspath(sub_file.name)))
     #if (opts.batch == "IC") : system('qsub %s -q %s -o %s.log '%(os.path.abspath(sub_file.name),opts.queue,os.path.abspath(sub_file.name)))
   if opts.runLocal:
     if opts.parallel:
@@ -695,9 +733,10 @@ def writeMultiDimFit(method=None,wsOnly=False):
         if (opts.mhRange>-1):
          makeFloatMHCard()
         if not opts.skipWorkspace:
+          print "we enter if not opts.skipWorkspace"  
           datacardname = os.path.basename(opts.datacard).replace('.txt','')
           print 'Creating workspace for %s...'%method
-          exec_line = 'text2workspace.py %s -o %s %s'%(os.path.abspath(opts.datacard),os.path.abspath(opts.datacard).replace('.txt',method+'.root'),ws_args[method]) 
+          exec_line = 'text2workspace.py %s -o %s %s'%(os.path.abspath(opts.datacard),os.path.abspath(opts.datacard).replace('.txt',method+opts.catName+'.root'),ws_args[method]) 
           print exec_line
           if opts.postFit:
                           exec_line += '&& combine -m 125 -M MultiDimFit --saveWorkspace -n %s_postFit %s' % ( datacardname+method, os.path.abspath(opts.datacard).replace('.txt',method+'.root') )
@@ -705,7 +744,8 @@ def writeMultiDimFit(method=None,wsOnly=False):
           if opts.parallel and opts.dryRun:
                           parallel.run(system,(exec_line,))
           else:
-                          system(exec_line)
+              print '****DEBUG this is what is going to be executed: '+str(exec_line)
+              system(exec_line)
               
         if wsOnly:
            return
@@ -748,7 +788,8 @@ def writeMultiDimFit(method=None,wsOnly=False):
                              opts.additionalOptions += " --setPhysicsModelParameters %s" %pars
       
         else:
-          opts.datacard = opts.datacard.replace('.txt',method+'.root')
+            print "we enter the else"
+            opts.datacard = opts.datacard.replace('.txt',method+opts.catName+'.root')
               
                   
                   
@@ -840,6 +881,7 @@ def configure(config_line):
     if option.startswith('pointsperjob='): opts.pointsperjob = int(option.split('=')[1])
     if option.startswith('splitChannels='): opts.splitChannels = option.split('=')[1].split(',')
     if option.startswith('toysFile='): opts.toysFile = option.split('=')[1]
+    if option.startswith('catName='): opts.catName = '_'+option.split('=')[1]
     if option.startswith('mh='): 
       #opts.mh = float(option.split('=')[1])
       mhStr = (option.split('=')[1])

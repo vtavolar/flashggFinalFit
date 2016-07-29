@@ -86,13 +86,13 @@ for cat in range(ncats):
   
   os.system('chmod +x %s'%f.name)
   if options.dryRun:
-    if (options.batch == "IC") : print 'qsub -q %s -o %s.log %s'%(options.queue,os.path.abspath(f.name),os.path.abspath(f.name))
+    if (options.batch == "IC" or options.batch == "T3CH") : print 'qsub -q %s -o %s.log %s'%(options.queue,os.path.abspath(f.name),os.path.abspath(f.name))
     else: print 'bsub -q %s -o %s.log %s'%(options.queue,os.path.abspath(f.name),os.path.abspath(f.name))
 
   elif options.runLocal:
     os.system('./%s'%f.name)
   else:
-     if (options.batch == "IC") : os.system('qsub -q %s -o %s.log %s'%(options.queue,os.path.abspath(f.name),os.path.abspath(f.name)))
+     if (options.batch == "IC" or options.batch == "T3CH") : os.system('qsub -q %s -o %s.log %s'%(options.queue,os.path.abspath(f.name),os.path.abspath(f.name)))
      else : os.system('bsub -q %s -o %s.log %s'%(options.queue,os.path.abspath(f.name),os.path.abspath(f.name)))
   
   

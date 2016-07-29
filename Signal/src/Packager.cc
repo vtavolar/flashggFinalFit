@@ -191,7 +191,7 @@ void Packager::packageOutput(bool split, string process , string tag){
 				}
 				MH->setVal(mh);
         float XS_value = 0;
-        if (split_){
+	if (split_ ){
         XS_value=normalization->GetXsection(mh,process); // in this case get proc-specific eff*acc
         } else {
         XS_value=normalization->GetXsection(mh); // or else, get the one for all processes!

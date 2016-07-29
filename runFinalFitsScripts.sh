@@ -1,6 +1,4 @@
 #!/bin/bash
-
-
 #bash variables
 FILE="";
 EXT="auto"; #extensiom for all folders and files created by this script
@@ -25,7 +23,7 @@ INTLUMI=1
 DATAFILE=""
 UNBLIND=0
 ISDATA=0
-VERBOSE=0
+VERBOSE=1
 BATCH="LSF"
 DEFAULTQUEUE="1nh"
 usage(){
@@ -102,8 +100,18 @@ done
 if (($VERBOSE==1)) ; then echo "[INFO] SMEARS $SMEARS" ;fi
 if (($VERBOSE==1)) ; then echo "[INFO] SCALES $SCALES" ;fi
 
-if [ $BATCH == "IC" ]; then
+if [[ $BATCH == "IC" ]]; then
 DEFAULTQUEUE=hepshort.q
+#DEFAULTQUEUE=hepmedium.q
+BATCHOPTION=" --batch $BATCH"
+fi
+if [[ $BATCH == "LSF" ]]; then
+DEFAULTQUEUE=1nh
+#DEFAULTQUEUE=hepmedium.q
+BATCHOPTION=" --batch $BATCH"
+fi
+if [[ $BATCH == "T3CH" ]]; then
+DEFAULTQUEUE=all.q
 #DEFAULTQUEUE=hepmedium.q
 BATCHOPTION=" --batch $BATCH"
 fi
@@ -162,8 +170,8 @@ fi
 SIGFILES=$PWD/Signal/$OUTDIR/CMS-HGG_sigfit_${EXT}.root
 
 cd Background
-echo "./runBackgroundScripts.sh -p $PROCS -f $CATS --ext $EXT --sigFile $SIGFILES --seed $COUNTER --intLumi $INTLUMI $BLINDINGOPT $PSEUDODATAOPT $DATAOPT $DATAFILEOPT"
-./runBackgroundScripts.sh -p $PROCS -f $CATS --ext $EXT --sigFile $SIGFILES --seed $COUNTER --intLumi $INTLUMI $BLINDINGOPT $PSEUDODATAOPT $DATAOPT $DATAFILEOPT
+echo "./runBackgroundScripts.sh -p $PROCS -f $CATS --ext $EXT --sigFile $SIGFILES --seed $COUNTER --intLumi $INTLUMI $BLINDINGOPT $PSEUDODATAOPT $DATAOPT $DATAFILEOPT $BATCHOPTION "
+./runBackgroundScripts.sh -p $PROCS -f $CATS --ext $EXT --sigFile $SIGFILES --seed $COUNTER --intLumi $INTLUMI $BLINDINGOPT $PSEUDODATAOPT $DATAOPT $DATAFILEOPT $BATCHOPTION
 
 cd -
 if [ $USER == lcorpe ]; then
@@ -182,8 +190,10 @@ echo "------------> Create DATACARD"
 echo "------------------------------------------------"
 
 cd Datacard
-echo "./makeParametricModelDatacardFLASHgg.py -i $FILE  -o Datacard_13TeV_${EXT}.txt -p $PROCS -c UntaggedTag_0,UntaggedTag_1,UntaggedTag_2,UntaggedTag_3,VBFTag_0,VBFTag_1,TTHHadronicTag,TTHLeptonicTag --photonCatScales $SCALES --photonCatSmears $SMEARS --isMultiPdf --mass 125 --theoryNormFactors norm_factors.py #--submitSelf #--intLumi $INTLUMI"
-./makeParametricModelDatacardFLASHgg.py -i $FILE  -o Datacard_13TeV_${EXT}.txt -p $PROCS -c UntaggedTag_0,UntaggedTag_1,UntaggedTag_2,UntaggedTag_3,VBFTag_0,VBFTag_1,TTHHadronicTag,TTHLeptonicTag --photonCatScales $SCALES --photonCatSmears $SMEARS --isMultiPdf --mass 125 --theoryNormFactors norm_factors.py #--submitSelf #--intLumi $INTLUMI
+#echo "./makeParametricModelDatacardFLASHgg.py -i $FILE  -o Datacard_13TeV_${EXT}.txt -p $PROCS -c SigmaMpTTag_0,SigmaMpTTag_1,SigmaMpTTag_2 --photonCatScales $SCALES --photonCatSmears $SMEARS --isMultiPdf --mass 125 --theoryNormFactors norm_factors.py #--submitSelf #--intLumi $INTLUMI"
+./makeParametricModelDatacardFLASHgg.py -i $FILE  -o Datacard_13TeV_${EXT}.txt -p $PROCS -c SigmaMpTTag_0,SigmaMpTTag_1,SigmaMpTTag_2 --photonCatScales $SCALES --photonCatSmears #$SMEARS --isMultiPdf --mass 125 --theoryNormFactors norm_factors.py #--submitSelf #--intLumi $INTLUMI
+echo "./makeParametricModelDatacardFLASHgg.py -i $FILE  -o Datacard_13TeV_${EXT}.txt -p $PROCS -c SigmaMpTTag_0,SigmaMpTTag_1,SigmaMpTTag_2 --photonCatScales $SCALES --photonCatSmears $SMEARS --isMultiPdf --mass 125 #--theoryNormFactors norm_factors.py #--submitSelf #--intLumi $INTLUMI"
+./makeParametricModelDatacardFLASHgg.py -i $FILE  -o Datacard_13TeV_${EXT}.txt -p $PROCS -c SigmaMpTTag_0,SigmaMpTTag_1,SigmaMpTTag_2 --photonCatScales $SCALES --photonCatSmears $SMEARS --isMultiPdf --mass 125 #--theoryNormFactors norm_factors.py #--submitSelf #--intLumi $INTLUMI
 cd -
 fi
 
@@ -300,7 +310,7 @@ fi
 cd -
 fi
 
-if [ $USER == lcorpe ] || [ $USER == lc1113 ]; then
+if [ $USER == xlcorpe ] || [ $USER == lc1113 ]; then
 echo " All stages of the final fit exercice $EXT  are done, see output here: https://lcorpe.web.cern.ch/lcorpe/$OUTDIR/  or  http://www.hep.ph.imperial.ac.uk/~lc1113/$OUTDIR " |  mail -s "FINAL FITS: $EXT " lc1113@imperial.ac.uk
 fi
 

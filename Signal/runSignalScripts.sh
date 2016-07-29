@@ -74,7 +74,7 @@ echo "INTLUMI $INTLUMI"
 
 OUTDIR="outdir_$EXT"
 echo "[INFO] outdir is $OUTDIR" 
-if [ "$FILE" == "" ];then
+if [[ $FILE == "" ]];then
 echo "ERROR, input file (--inputFile or -i) is mandatory!"
 exit 0
 fi
@@ -87,20 +87,23 @@ SIGFITONLY=1
 SIGPLOTSONLY=1
 fi
 
-if [ $BATCH == "IC" ]; then
+if [[ $BATCH == "IC" ]]; then
 DEFAULTQUEUE=hepshort.q
 fi
-if [ $BATCH == "LSF" ]; then
+if [[ $BATCH == "LSF" ]]; then
 DEFAULTQUEUE=1nh
 fi
-
+if [[ $BATCH == "T3CH" ]]; then
+DEFAULTQUEUE=all.q
+fi
 ####################################################
 ################## SIGNAL F-TEST ###################
 ####################################################
-ls dat/newConfig_${EXT}.dat
-if [ -e dat/newConfig_${EXT}.dat ]; then
-  echo "[INFO] sigFTest dat file $OUTDIR/dat/copy_newConfig_${EXT}.dat already exists, so SKIPPING SIGNAL FTEST"
+#ls dat/newConfig_${EXT}.dat
+if [ -e ${OUTDIR}/dat/newConfig_${EXT}.dat ]; then
+  echo "[INFO] sigFTest dat file $OUTDIR/dat/newConfig_${EXT}.dat already exists, so SKIPPING SIGNAL FTEST"
 else
+  echo "[INFO] sigFTest dat file $OUTDIR/dat/newConfig_${EXT}.dat  DOES NOT already exist, so PERFORMING SIGNAL FTEST"
   if [ $FTESTONLY == 1 ]; then
     mkdir -p $OUTDIR/fTest
     echo "=============================="
@@ -142,11 +145,13 @@ else
   fi
   echo "[INFO] sigFTest jobs completed, check output and do:"
   echo "cp $PWD/dat/newConfig_${EXT}_temp.dat $PWD/dat/newConfig_${EXT}.dat"
-  echo "and manually amend chosen number of gaussians using the output pdfs."
+  echo "and manually amend chosen number of gaussians using the output pdfs here:"
+	echo "Signal/outdir_${EXT}/sigfTest/"
   echo "then re-run the same command to continue !"
   CALCPHOSYSTONLY=0
   SIGFITONLY=0
   SIGPLOTSONLY=0
+	exit 1
 fi
 ####################################################
 ################## CALCPHOSYSTCONSTS ###################
@@ -174,7 +179,7 @@ if [ $SIGFITONLY == 1 ]; then
   echo "=============================="
 
 
-  if [ "$BATCH" == "" ]; then
+  if [[ $BATCH == "" ]]; then
     echo "./bin/SignalFit -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 -s dat/photonCatSyst_$EXT.dat --procs $PROCS -o $OUTDIR/CMS-HGG_mva_13TeV_sigfit.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI "
     ./bin/SignalFit -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 -s dat/photonCatSyst_$EXT.dat --procs $PROCS -o $OUTDIR/CMS-HGG_mva_13TeV_sigfit.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI #--pdfWeights 26
   else
@@ -243,7 +248,6 @@ cp ~lcorpe/public/index.php ~/www/$OUTDIR/sigplots/.
 cp ~lcorpe/public/index.php ~/www/$OUTDIR/systematics/.
 cp ~lcorpe/public/index.php ~/www/$OUTDIR/sigfit/.
 cp ~lcorpe/public/index.php ~/www/$OUTDIR/sigfTest/.
-cp ~lcorpe/public/index.php ~/www/$OUTDIR/initialFits/.
 
 echo "plots available at: "
 echo "https://lcorpe.web.cern.ch/lcorpe/$OUTDIR"
@@ -256,7 +260,6 @@ cp ~lc1113/index.php ~lc1113/public_html/$OUTDIR/sigplots/.
 cp ~lc1113/index.php ~lc1113/public_html/$OUTDIR/systematics/.
 cp ~lc1113/index.php ~lc1113/public_html/$OUTDIR/sigfit/.
 cp ~lc1113/index.php ~lc1113/public_html/$OUTDIR/sigfTest/.
-cp ~lc1113/index.php ~lc1113/public_html/$OUTDIR/initialFits/.
 echo "plots available at: "
 echo "http://www.hep.ph.imperial.ac.uk/~lc1113/$OUTDIR"
 fi

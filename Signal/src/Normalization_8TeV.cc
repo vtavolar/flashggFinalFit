@@ -25,12 +25,16 @@ int Normalization_8TeV::Init(int sqrtS){
     
     for (double mH=120;mH<=135.0;mH+=0.1){ // Do we need this up to 250 ?
 	double valBR    =  (double)TPython::Eval(Form("buildSMHiggsSignalXSBR.getBR(%f)",mH));
+	//	double valXSall =  (double)TPython::Eval(Form("buildSMHiggsSignalXSBR.getXS(%f,'%s')",mH,"all"));
 	double valXSggH =  (double)TPython::Eval(Form("buildSMHiggsSignalXSBR.getXS(%f,'%s')",mH,"ggH"));
 	double valXSqqH =  (double)TPython::Eval(Form("buildSMHiggsSignalXSBR.getXS(%f,'%s')",mH,"qqH"));
 	double valXSttH =  (double)TPython::Eval(Form("buildSMHiggsSignalXSBR.getXS(%f,'%s')",mH,"ttH"));
 	double valXSWH  =  (double)TPython::Eval(Form("buildSMHiggsSignalXSBR.getXS(%f,'%s')",mH,"WH"));
 	double valXSZH  =  (double)TPython::Eval(Form("buildSMHiggsSignalXSBR.getXS(%f,'%s')",mH,"ZH"));
+	std::cout<<"Here we read xsecs"<<std::endl;
+	std::cout<<valBR<<" "<<valXSggH + valXSqqH + valXSttH +valXSZH +valXSZH<<" "<<valXSggH<<" "<<valXSqqH<<" "<<valXSttH<<" "<<valXSWH<<" "<<valXSZH<<std::endl;
 	BranchingRatioMap[mH]	= valBR;
+        XSectionMap_all[mH]	= valXSggH + valXSqqH + valXSttH +valXSZH +valXSZH; 	
         XSectionMap_ggh[mH]	= valXSggH; 	
         XSectionMap_vbf[mH]	= valXSqqH; 	
         XSectionMap_tth[mH]	= valXSttH; 	
@@ -142,6 +146,8 @@ TGraph * Normalization_8TeV::GetSigmaGraph(TString process)
 	std::map<double, double> * XSectionMap = 0 ;
 	if ( process == "ggh" || process == "ggH") {
 		XSectionMap = &XSectionMap_ggh;
+	} else if ( process == "InsideAcceptance" || process == "OutsideAcceptance"){
+	  	XSectionMap = &XSectionMap_all;
 	} else if ( process == "vbf" || process == "VBF" ) { // FIXME
 		XSectionMap = &XSectionMap_vbf;
 	} else if ( process == "vbfold") {
@@ -206,8 +212,10 @@ double Normalization_8TeV::GetXsection(double mass, TString HistName) {
 
 	std::map<double,double> *XSectionMap;
 
-	if (HistName.Contains("ggh")) {
+	if (HistName.Contains("ggh")  ) {
 		XSectionMap = &XSectionMap_ggh;
+	} else if(HistName.Contains("outsideacceptance") || HistName.Contains("insideacceptance")  || HistName.Contains("OutsideAcceptance") || HistName.Contains("InsideAcceptance") ){
+	  XSectionMap = &XSectionMap_all;
 	} else if (HistName.Contains("vbf") && !HistName.Contains("vbfold")) {
 		XSectionMap = &XSectionMap_vbf;
 	} else if (HistName.Contains("vbfold")) {
