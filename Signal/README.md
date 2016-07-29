@@ -40,7 +40,13 @@ One can use the `./bin/signalFTest` script to regenerate this.
 
 The signalFtest has as its purpose to determine how many gaussians should be used to fit the mgg distribution for each Tag/Process, both in the cases that the "right vertex" (RV) and "wrong vertex" (WV) have been selected (this uses a `dZ<1` cut).
 
-The output is the `dat/newConfig.dat` file which lists this information. At present, the script always returns a fairly arbitrary number of gaussians, with the idea being that the user can change the values as they like after inspecting the output plots.
+The output is the `dat/newConfig.dat` file which lists this information. The script returns a fairly reasonable number of gaussians. The projection of the pull distribution of the signal histogram with and incrasing number of gaussian is fitted with a normal gaussian: this should have mean = 0  and sigma = 1. A distance is then computed as sqrt(mean^2 + (sigma-1)^2). The number of gaussian is chosen for the categories with a number of events > minNevts. If the distance is < 0.1 for a given #gaussian, we take that number, otherwise the choice is made looking at the distance and the chi2.
+The choice is tunable by tweaking the parameters 
+ float myThresholdDist = 0.8; // how smaller myDistance computed on  n+1 has to be wrt n
+ float myThresholdChi2 = 0.5; // how smaller the chi2 of n+1 has to be wrt n
+ int   minNevts        = 500; // if below minNevts #gauss = -1
+ float itsOK           = 0.1; // if  myDistance < itsOK suggest the #gauss that fulfill this condition
+The idea remains that the user should look at the fits and judge whether the choice is appropriate. (To help a script makeOnepdf.sh creates a pdf file, with the same name of the output directory, with all needed information)
 
 By default, if the stats in a particular proc/tag/RV-WV are too low, a "replacement" pdf is used: this means that we use the dataset from a different category to do the fitting and then normalise it using the original dataset. You can trigger this yourself by specifying "-1" instead of giving a number of gaussians in the config file. Furthermore, instead of using the 'default' replacement dataset for the RV, you can specify it in the config file as an extra value on the line. For the WV, since the shape depends only on detector effects, if is expected to be the same for all categories, the "UntaggedTag_2" shape is always used if a replacement is needed.
 
