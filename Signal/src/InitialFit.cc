@@ -40,6 +40,7 @@ vector<int> InitialFit::getAllMH(){
   for (int m=mhLow_; m<=mhHigh_; m+=5){
 		if (skipMass(m)) continue;
     if (verbosity_>=1) cout << "[INFO] LinearInterp - Adding mass: " << m << endl;
+    cout << "[INFO] LinearInterp - Adding mass: " << m << endl;
     result.push_back(m);
   }
   return result;
@@ -68,6 +69,9 @@ void InitialFit::addDataset(int mh, RooDataSet *data){
 
 void InitialFit::buildSumOfGaussians(string name, int nGaussians, bool recursive, bool forceFracUnity){
 
+  cout << "In buildSumOfGaussians " << endl;
+  cout << name <<endl ;
+  cout << "allMH_.size " << allMH_.size() << endl;
   for (unsigned int i=0; i<allMH_.size(); i++){
     int mh = allMH_[i];
     MH->setConstant(false);
@@ -78,11 +82,18 @@ void InitialFit::buildSumOfGaussians(string name, int nGaussians, bool recursive
     map<string,RooRealVar*> tempFitParams;
     map<string,RooAbsReal*> tempFitUtils;
     map<string,RooGaussian*> tempGaussians;
-    
+
+    cout << "nGaussians =  " << nGaussians << endl;
     for (int g=0; g<nGaussians; g++){
-      RooRealVar *dm = new RooRealVar(Form("dm_mh%d_g%d",mh,g),Form("dm_mh%d_g%d",mh,g),0.1,-8.,8.);
+      //      RooRealVar *dm = new RooRealVar(Form("dm_mh%d_g%d",mh,g),Form("dm_mh%d_g%d",mh,g),0.1,-8.,8.);
+      RooRealVar *dm = new RooRealVar(Form("dm_mh%d_g%d",mh,g),Form("dm_mh%d_g%d",mh,g),0.1,-3.,3.);
       RooAbsReal *mean = new RooFormulaVar(Form("mean_mh%d_g%d",mh,g),Form("mean_mh%d_g%d",mh,g),"@0+@1",RooArgList(*MH,*dm));
-      RooRealVar *sigma = new RooRealVar(Form("sigma_mh%d_g%d",mh,g),Form("sigma_mh%d_g%d",mh,g),2.,0.4,20.);
+
+      // Make it as in signalFTest.cpp
+      // MDDB RooRealVar *sigma = new RooRealVar(Form("sigma_mh%d_g%d",mh,g),Form("sigma_mh%d_g%d",mh,g),2.,0.4,20.);
+      // MDDB every gaussian you add is larger than the previous one (this is only the starting point of the fit)
+      RooRealVar *sigma = new RooRealVar(Form("sigma_mh%d_g%d",mh,g),Form("sigma_mh%d_g%d",mh,g), 1.*(g+1), 0.4,20.); 
+
       RooGaussian *gaus = new RooGaussian(Form("gaus_mh%d_g%d",mh,g),Form("gaus_mh%d_g%d",mh,g),*mass,*mean,*sigma);
       tempFitParams.insert(pair<string,RooRealVar*>(string(dm->GetName()),dm));
       tempFitParams.insert(pair<string,RooRealVar*>(string(sigma->GetName()),sigma));
@@ -102,6 +113,7 @@ void InitialFit::buildSumOfGaussians(string name, int nGaussians, bool recursive
         coeffs->add(*recFrac);
       }
     }
+    cout << "done  loop ngauss" << endl;    
     assert(gaussians->getSize()==nGaussians && coeffs->getSize()==nGaussians-(1*!forceFracUnity));
     RooAddPdf *tempSumOfGaussians = new RooAddPdf(Form("%s_mh%d",name.c_str(),mh),Form("%s_mh%d",name.c_str(),mh),*gaussians,*coeffs,recursive);
     sumOfGaussians.insert(pair<int,RooAddPdf*>(mh,tempSumOfGaussians));
@@ -109,6 +121,7 @@ void InitialFit::buildSumOfGaussians(string name, int nGaussians, bool recursive
     fitUtils.insert(pair<int,map<string,RooAbsReal*> >(mh,tempFitUtils));
     initialGaussians.insert(pair<int,map<string,RooGaussian*> >(mh,tempGaussians));
   }
+  cout << "done  loop mH" << endl;          
 }
 
 void InitialFit::loadPriorConstraints(string filename, float constraintValue){
@@ -162,6 +175,15 @@ void InitialFit::saveParamsToFileAtMH(string filename, int setMH){
 map<int,map<string,RooRealVar*> > InitialFit::getFitParams(){
   return fitParams;
 }
+
+RooFitResult* InitialFit::getFitResults(int i){
+  return fitResults.at(i);
+}
+
+RooAddPdf * InitialFit::getSumOfGaussians(int i){
+  return sumOfGaussians.at(i);
+}
+
 
 void InitialFit::printFitParams(){
 	cout << "[INFO] Printing fit param map: " << endl;

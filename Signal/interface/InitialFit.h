@@ -33,8 +33,10 @@ class InitialFit {
     void runFits(int ncpu);
     void plotFits(std::string name, std::string rvwn="");
     void setVerbosity(int v);
-
     void setFitParams(std::map<int,std::map<std::string,RooRealVar*> >& pars );
+    RooFitResult* getFitResults(int i);
+    RooAddPdf * getSumOfGaussians(int i); 
+
   private:
 
     RooRealVar *mass;
@@ -46,6 +48,7 @@ class InitialFit {
     std::map<int,std::map<std::string,RooAbsReal*> > fitUtils;
     std::map<int,std::map<std::string,RooGaussian*> > initialGaussians;
     std::map<int,RooFitResult*> fitResults;
+
     int mhLow_;
     int mhHigh_;
 		std::vector<int> skipMasses_;
