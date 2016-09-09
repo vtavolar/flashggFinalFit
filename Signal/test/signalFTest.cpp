@@ -58,6 +58,14 @@ bool forceFracUnity_=false;
 bool isFlashgg_;
 bool verbose_;
 bool unbinnedFit_;
+RooRealVar *mass ;
+RooRealVar *dZ; 
+
+// set range to be the same as SigfitPlots
+// want quite a large range otherwise don't
+// see crazy bins on the sides
+float rangeLow = 115;   // make this configurable and in Ftest too
+float rangeHigh = 135;
 
 void OptionParser(int argc, char *argv[]){
   po::options_description desc1("Allowed options");
@@ -90,52 +98,6 @@ void OptionParser(int argc, char *argv[]){
   if (vm.count("forceFracUnity")) forceFracUnity_=true;
 }
 
-RooAddPdf *buildSumOfGaussians(string name, RooRealVar *mass, RooRealVar *MH, int nGaussians){
-
-  int mh=MH->getVal();
-  assert(mh==125);
-  RooArgList *gaussians = new RooArgList();
-  RooArgList *coeffs = new RooArgList();
-  for (int g=0; g<nGaussians; g++){
-
-    //RooRealVar *dm = new RooRealVar(Form("dm_g%d",g),Form("dm_g%d",g),0.1,-2.*(1.+0.5*g),2.*(1.+0.5*g));
-    RooRealVar *dm = new RooRealVar(Form("dm_g%d",g),Form("dm_g%d",g),0.1,-3.,3.); // make this identical to fit in signalfTest. FIXME maybe just use the identical function,ie create an InitialFit object here ?
-    RooAbsReal *mean = new RooFormulaVar(Form("mean_g%d",g),Form("mean_g%d",g),"@0+@1",RooArgList(*MH,*dm));
-    //RooRealVar *sigma = new RooRealVar(Form("sigma_g%d",g),Form("sigma_g%d",g),2.,0.7,5.*(1.+0.5*g));
-
-    //    RooRealVar *sigma = new RooRealVar(Form("sigma_g%d",g),Form("sigma_g%d",g),2.,0.4,10.); // make this identical to fit in signalfTest. FIXME maybe just use the identical function,ie create an InitialFit object here ?
-
-    // every gaussian you add is larger than the previous one (this is only the starting point of the fit)
-    RooRealVar *sigma = new RooRealVar(Form("sigma_g%d",g),Form("sigma_g%d",g), 1.*(g+1), 0.4,20.); 
-
-    RooGaussian *gaus = new RooGaussian(Form("gaus_g%d",g),Form("gaus_g%d",g),*mass,*mean,*sigma);
-
-    //old fit params... check !
-    //RooRealVar *dm = new RooRealVar(Form("dm_g%d",g),Form("dm_g%d",g),0.1,-0.1*(1.+0.5*g),0.1*(1.+0.5*g));
-    //RooAbsReal *mean = new RooFormulaVar(Form("mean_g%d",g),Form("mean_g%d",g),"@0+@1",RooArgList(*MH,*dm));
-    //RooRealVar *sigma = new RooRealVar(Form("sigma_g%d",g),Form("sigma_g%d",g),0.5,0.1,5.*(1.+0.5*g));
-    //RooGaussian *gaus = new RooGaussian(Form("gaus_g%d",g),Form("gaus_g%d",g),*mass,*mean,*sigma);
-
-    gaussians->add(*gaus);
-
-    if (g<nGaussians-1) {
-      RooRealVar *frac = new RooRealVar(Form("frac_g%d",g),Form("frac_g%d",g),0.1,0.01,0.99);
-      //tempFitParams.insert(pair<string,RooRealVar*>(string(frac->GetName()),frac));
-      coeffs->add(*frac);
-    }
-
-    if (g==nGaussians-1 && forceFracUnity_){
-      string formula="1.";
-      for (int i=0; i<nGaussians-1; i++) formula += Form("-@%d",i);
-      RooAbsReal *recFrac = new RooFormulaVar(Form("frac_g%d",g),Form("frac_g%d",g),formula.c_str(),*coeffs);
-      //tempFitUtils.insert(pair<string,RooAbsReal*>(string(recFrac->GetName()),recFrac));
-      coeffs->add(*recFrac);
-    }
-  }
-  RooAddPdf *tempSumOfGaussians = new RooAddPdf(name.c_str(),name.c_str(),*gaussians,*coeffs,recursive_);
-  return tempSumOfGaussians;
-}
-
 void plot(string outPath, int mh, RooRealVar *var, RooAbsData *data, RooAbsPdf *pdf){
 
   TCanvas *canv = new TCanvas("c","c",1000,1000);
@@ -161,12 +123,55 @@ double getMyNLL(RooRealVar *var, RooAbsPdf *pdf, RooDataHist *data){
 }
 
 
+RooDataSet * reduceDataset(RooDataSet *data0){
+
+  RooDataSet *data = (RooDataSet*) data0->emptyClone()->reduce(RooArgSet(*mass, *dZ));
+  RooRealVar *weight0 = new RooRealVar("weight","weight",-100000,1000000);
+  for (unsigned int i=0 ; i < data0->numEntries() ; i++){
+    if (data0->get(i)->getRealValue("CMS_hgg_mass") > rangeLow && data0->get(i)->getRealValue("CMS_hgg_mass") <rangeHigh ){
+      mass->setVal(data0->get(i)->getRealValue("CMS_hgg_mass"));
+      weight0->setVal(data0->weight() ); // <--- is this correct?
+      dZ->setVal(data0->get(i)->getRealValue("dZ"));
+      data->add( RooArgList(*mass, *dZ, *weight0), weight0->getVal() );
+    }
+  }
+return data;
+}
+
+
+RooDataSet * rvwvDataset(RooDataSet *data0, string rvwv){
+
+  RooDataSet *dataRV = (RooDataSet*) data0->emptyClone()->reduce(RooArgSet(*mass, *dZ));
+  RooDataSet *dataWV = (RooDataSet*) data0->emptyClone()->reduce(RooArgSet(*mass, *dZ));
+  RooRealVar *weight0 = new RooRealVar("weight","weight",-100000,1000000);
+  for (unsigned int i=0 ; i < data0->numEntries() ; i++){
+    if (data0->get(i)->getRealValue("CMS_hgg_mass") > rangeLow && data0->get(i)->getRealValue("CMS_hgg_mass") < rangeHigh ){
+      mass->setVal(data0->get(i)->getRealValue("CMS_hgg_mass"));
+      weight0->setVal(data0->weight() ); // <--- is this correct?
+      dZ->setVal(data0->get(i)->getRealValue("dZ"));
+      if (dZ->getVal() <1.){
+	dataRV->add( RooArgList(*mass, *dZ, *weight0), weight0->getVal() );
+      } else{
+	dataWV->add( RooArgList(*mass, *dZ, *weight0), weight0->getVal() );
+      }
+    }
+  }
+  if (rvwv.compare("RV") ==0){
+    return dataRV;
+  } else if (rvwv.compare("WV") ==0){
+    return dataWV;
+  } else {
+    std::cout << "[ERROR] (rvwvDataset) please specific second argument as 'RV' or 'WV'. Exit (1); " << std::endl;
+    exit (1);
+  }
+}
+
 int main(int argc, char *argv[]){
 
   // Criteria to choose #gauss
+  int   minNevts    = 500; // if below minNevts #gauss = -1  
   float myThresholdDist = 0.8; // how much better n+1 has to be wrt n
   float myThresholdChi2 = 0.5; // how much better n+1 has to be wrt n
-  int   minNevts    = 500; // if below minNevts #gauss = -1
   float itsOK       = 0.1; // if  myDistance < itsOK suggest the #gauss that fulfill this condition
 
   OptionParser(argc,argv);
@@ -193,15 +198,12 @@ int main(int argc, char *argv[]){
                                //(default is an empty string)
 
   
-  // set range to be the same as SigfitPlots
-  // want quite a large range otherwise don't
-  // see crazy bins on the sides
-  float rangeLow = 115;
-  float rangeHigh = 135;
+  //want binning of \0.5GeV for plots
+  int   nBins    = 2* int(rangeHigh -rangeLow);  
 
-  //want binning of \0.5GeV
-  int   nBins    = 2* int(rangeHigh -rangeLow); 
-
+  // Bins for fitting
+  int nBinsFit = 160; // MDDB make it a parameter
+	
   vector<int> skipMasses;	
   bool binnedFit = true;
   if (unbinnedFit_) binnedFit=false;
@@ -239,10 +241,13 @@ int main(int argc, char *argv[]){
   WSTFileWrapper *inWS 
     = new WSTFileWrapper(filename_,"tagsDumper/cms_hgg_13TeV");
   if(verbose_) std::cout << "[INFO] Opened files OK!" << std::endl;
-  RooRealVar *mass = (RooRealVar*)inWS->var("CMS_hgg_mass");
+
+  mass = (RooRealVar*)inWS->var("CMS_hgg_mass");
   if(verbose_) std::cout << "[INFO] Got mass variable " << mass << std::endl;
   mass->setBins(nBins);
   mass->setRange(rangeLow,rangeHigh);
+  dZ = (RooRealVar*)inWS->var("dZ");
+ 
 
   // duplicate MH variable ? need to remove this ?? LC
   RooRealVar *MH = new RooRealVar("MH","MH",mass_);
@@ -333,16 +338,18 @@ int main(int argc, char *argv[]){
       string proc = procs[p];
 
       //declare the datasets to use
-			RooDataSet *data;  
-			RooDataSet *dataRV;
-			RooDataSet *dataWV; 
+      RooDataSet *data;  
+      RooDataSet *dataRV;
+      RooDataSet *dataWV; 
       
       // We want to reduce our datasets, so just get the most important vars.
-      RooRealVar *mass = (RooRealVar*)inWS->var("CMS_hgg_mass");
+      //      RooRealVar *mass = (RooRealVar*)inWS->var("CMS_hgg_mass");
+      mass = (RooRealVar*)inWS->var("CMS_hgg_mass");
       //RooRealVar *dZ = (RooRealVar*)inWS->var("dZ");
-      RooRealVar *weight0 = new RooRealVar("weight","weight",-100000,1000000);
-      RooRealVar *dZ = new RooRealVar("dZ","dZ",-100000,1000000);
-      if (verbose_) std::cout << "[INFO] got roorealvars from ws ? mass " << mass << " dz " << dZ << std::endl;
+
+      // RooRealVar *weight0 = new RooRealVar("weight","weight",-100000,1000000);
+      // RooRealVar *dZ = new RooRealVar("dZ","dZ",-100000,1000000);
+      // if (verbose_) std::cout << "[INFO] got roorealvars from ws ? mass " << mass << " dz " << dZ << std::endl;
       
       // access dataset and immediately reduce it!
       if (isFlashgg_){
@@ -358,23 +365,39 @@ int main(int argc, char *argv[]){
           }
         }
         
-        data   = (RooDataSet*) data0->emptyClone()->reduce(RooArgSet(*mass, *dZ));
-        dataRV = (RooDataSet*) data0->emptyClone()->reduce(RooArgSet(*mass, *dZ));
-        dataWV = (RooDataSet*) data0->emptyClone()->reduce(RooArgSet(*mass, *dZ));
+	// this is to make it uniform with SignalFit
+	data   = reduceDataset((RooDataSet*)inWS->data(Form("%s_%d_13TeV_%s",proc.c_str(),mass_,flashggCats_[cat].c_str())));
+	dataRV = rvwvDataset(data,"RV"); 
+	dataWV = rvwvDataset(data,"WV"); 
+	
+	// // BASIC CHECK
+	// for (unsigned int i=0 ; i < dataRV->numEntries() ; i++){
+	//   if (dataRV->get(i)->getRealValue("CMS_hgg_mass") > rangeLow && dataRV->get(i)->getRealValue("CMS_hgg_mass") <rangeHigh ){
+	//     mass->setVal(dataRV->get(i)->getRealValue("CMS_hgg_mass"));
+	//     RooRealVar *weight0 = new RooRealVar("weight","weight",-100000,1000000);
+	//     weight0->setVal(dataRV->weight() ); 
+	//     dZ->setVal(dataRV->get(i)->getRealValue("dZ"));
+	//     cout << "BASIC " << mass->getVal() << " " << dZ->getVal() << " " << weight0->getVal() << endl;
+	//   }
+	// }	
+      
+        // data   = (RooDataSet*) data0->emptyClone()->reduce(RooArgSet(*mass, *dZ));
+        // dataRV = (RooDataSet*) data0->emptyClone()->reduce(RooArgSet(*mass, *dZ));
+        // dataWV = (RooDataSet*) data0->emptyClone()->reduce(RooArgSet(*mass, *dZ));
 
-        for (int i=0 ; i < data0->numEntries() ; i++){
-	  if (data0->get(i)->getRealValue("CMS_hgg_mass") > 115 && data0->get(i)->getRealValue("CMS_hgg_mass") <135 ){
-            mass->setVal(data0->get(i)->getRealValue("CMS_hgg_mass"));
-            weight0->setVal(data0->weight() ); // <--- is this correct?
-            dZ->setVal(data0->get(i)->getRealValue("dZ"));
-            data->add( RooArgList(*mass, *dZ, *weight0), weight0->getVal() );
-            if (dZ->getVal() <1.){
-	      dataRV->add( RooArgList(*mass, *dZ, *weight0), weight0->getVal() );
-            } else{
-	      dataWV->add( RooArgList(*mass, *dZ, *weight0), weight0->getVal() );
-            }
-	  }
-	}
+        // for (int i=0 ; i < data0->numEntries() ; i++){
+	//   if (data0->get(i)->getRealValue("CMS_hgg_mass") > rangeLow && data0->get(i)->getRealValue("CMS_hgg_mass") < rangeHigh ){
+        //     mass->setVal(data0->get(i)->getRealValue("CMS_hgg_mass"));
+        //     weight0->setVal(data0->weight() ); // <--- is this correct?
+        //     dZ->setVal(data0->get(i)->getRealValue("dZ"));
+        //     data->add( RooArgList(*mass, *dZ, *weight0), weight0->getVal() );
+        //     if (dZ->getVal() <1.){
+	//       dataRV->add( RooArgList(*mass, *dZ, *weight0), weight0->getVal() );
+        //     } else{
+	//       dataWV->add( RooArgList(*mass, *dZ, *weight0), weight0->getVal() );
+        //     }
+	//   }
+	// }
 
         //print out contents, if you want... 
 	if (verbose_) {
@@ -437,6 +460,8 @@ int main(int argc, char *argv[]){
       double prob=0.;
       std::vector<pair<int,float> > rv_results;
       std::vector<pair<int,float> > rv_chi2;
+      std::vector<pair<int,RooArgSet*> > rv_args;
+
       float rv_prob_limit =999;
 
       dataRV->plotOn(plotsRV[proc][cat]);
@@ -446,53 +471,57 @@ int main(int argc, char *argv[]){
       TCanvas *ccpPullRV = new TCanvas("ccpPullRV","PullsProjections",600,600);
 	
       RooDataHist * dataRVbinned = new RooDataHist("dataRVbinned","dataRVbinned",*mass,*dataRV); 
-
-      while (prob<rv_prob_limit && order <5){ 
+      
+      while (prob<rv_prob_limit && order <5){ // MDDB make it configurable
 			  
 	// Use the  InitialFit class that will be used later for the final signal fits
 	int mhLow(125), mhHigh(125);
-	InitialFit initFitRV(mass,MH,mhLow,mhHigh,skipMasses,binnedFit,nBins);
-	initFitRV.setVerbosity(5);
-	if (verbose_) std::cout << "[INFO] RV building sum of gaussians with nGaussiansRV " << order << std::endl;
-	bool recursive = false;
-	bool forceFracUnity = false;
-	initFitRV.buildSumOfGaussians(Form("cat%d_g%d",cat,order),order,recursive,forceFracUnity);
+	if (verbose_) cout << "[INFO] Mass " << endl;
+	mass->Print();
+	MH->Print() ;
 
-	if (verbose_) std::cout << "[INFO] RV setting datasets in initialFIT " << std::endl;
+	InitialFit initFitRV(mass,MH,mhLow,mhHigh,skipMasses,binnedFit,nBinsFit);
+	initFitRV.setVerbosity(5);
+	bool recursive = true; 
+	initFitRV.buildSumOfGaussians(Form("cat%d_g%d",cat,order),order,recursive);
+
 	map<int,RooDataSet*> dataSets;
-	int mh = 125;
+	int mh = 125; // just because you can have multiple mass points in InitialFit
 	dataSets.insert(pair<int,RooDataSet*>(mh,dataRV));
 	initFitRV.setDatasets(dataSets);    // one of these two is useless here
 	initFitRV.setDatasetsSTD(dataSets); // one of these two is useless here
-	if (verbose_) std::cout << "[INFO] RV running fits" << std::endl;
 
+	if (verbose_) cout << "[INFO] fit setup: mh = " << mh << " ; mhLow = " << mhLow << " ; mhHigh = " << mhHigh << " ; binned = " << binnedFit << " ; nBinsFit = " << nBinsFit << endl;
 	int ncpu = 1;
-	initFitRV.runFits(ncpu);
-	RooFitResult *fitRes = initFitRV.getFitResults(mh);	
-	RooAddPdf *pdf = initFitRV.getSumOfGaussians(mh);
-	mass->setBins(nBins);
+	initFitRV.runFits(ncpu);       
+	// MDDB	mass->setBins(nBins); // InitialFit reset the binning to 160
 
-        //old build sum of gaussians of correct order	
-	//old fit binned dataset	
-	//old RooAddPdf *pdf = buildSumOfGaussians(Form("cat%d_g%d",cat,order),mass,MH,order);	
-	//old RooFitResult *fitRes = pdf->fitTo(*dataRVbinned,Save(true),
-	//old 				  RooFit::Minimizer("Minuit","minimize"),
-	//old 				  SumW2Error(true),Verbose(false),Range(mass_-10,mass_+10)); 
-		
-        // do the unbinned fit
-	// RooFitResult *fitRes = pdf->fitTo(*dataRV,Save(true),
-	// 				  RooFit::Minimizer("Minuit","minimize"),
-	// 				  SumW2Error(true),Verbose(false),Range(mass_-10,mass_+10)); 
-
-	//	dataRV->Print();
-	//    	pdf->Print();
+	//MDDB save params to check that the gaussian parameters are the same as the ones found in SignalFit
+	system(Form("mkdir -p %s/fTest_params",outdir_.c_str()));   // MDDB a bit silly path...
+        initFitRV.saveParamsToFileAtMH(Form("%s/fTest_params/fTest_params_RV_proc_%s_cat_%s_g%d.txt",outdir_.c_str(),proc.c_str(), flashggCats_[cat].c_str(), order),125);
 	
+	RooFitResult *fitRes = 0;
+	std::map<int,RooFitResult*> map_fitRes = initFitRV.getFitResults();
+	std::map<int,RooFitResult*>::iterator it_fitres;
+	it_fitres = map_fitRes.find(125);
+        if (it_fitres != map_fitRes.end() ) fitRes = it_fitres->second;
+	
+	RooAddPdf *pdf = 0;
+	std::map<int,RooAddPdf*> map_pdf = initFitRV.getSumOfGaussians();
+	std::map<int,RooAddPdf*>::iterator it_pdf;
+	it_pdf = map_pdf.find(125);
+	if (it_pdf != map_pdf.end()) pdf = it_pdf->second;
+
+	// MDDB mass->setBins(nBins);
+	cout << " RV PDF arguments" << endl;
+	RooArgSet *args = pdf->getComponents();
+	args->Print("s");
+	rv_args.push_back(std::make_pair(order,args)); 
+
 	ccResRV->cd();
 	RooPlot* frame2 = mass->frame() ;
-	//	dataRV->plotOn(frame2);
-	dataRVbinned->plotOn(frame2);
+      	dataRVbinned->plotOn(frame2);
 	pdf->plotOn(frame2);
-	//	RooPlot* frame3 = mass->frame();
 	RooHist *hres = frame2->residHist() ;
 	hres->SetMarkerStyle(24+order);
 	hres->SetMarkerColor(colors[order-1]);
@@ -553,14 +582,13 @@ int main(int argc, char *argv[]){
 	//plot(Form("plots/fTest/%s_cat%d_g%d_rv",proc.c_str(),cat,order),
         //  mass_,mass,dataRV,pdf);
 	chi2 = 2.*(prevNll-thisNll);
-				
+	
         // alternative, simpler chi2... but assumed high stats?
         float chi2_bis= (plotsRV[proc][cat])->chiSquare();
         
         // plot this order
 	pdf->plotOn(plotsRV[proc][cat],LineColor(colors[order-1]));
-
-
+	
 	if (chi2<0. && order>1) chi2=0.;
 	int diffInDof = (2*order+(order-1))-(2*prev_order+(prev_order-1));
 	//int diffInDof = (order- prev_order);
@@ -568,6 +596,7 @@ int main(int argc, char *argv[]){
 	float prob_old = TMath::Prob(chi2,diffInDof);
 	prob = TMath::Prob(chi2_bis,2*order+(order-1));
 
+	
 	//Wilk's theorem
 	cout << "[INFO] \t RV: proc " << proc << " cat " 
 	     << flashggCats_[cat] << " order " << order << " diffinDof " 
@@ -578,7 +607,7 @@ int main(int argc, char *argv[]){
 
 	// rv_results.push_back(std::make_pair(order,prob));
 	rv_results.push_back(std::make_pair(order,myDistance)); // MDDB
-	rv_chi2.push_back(std::make_pair(order,fitchi2)); // MDDB
+	rv_chi2.push_back(std::make_pair(order,fitchi2));       // MDDB
 
 	prevNll=thisNll;
 	//	cache_order=order;
@@ -586,6 +615,7 @@ int main(int argc, char *argv[]){
 	order++;
       }
 
+      delete dataRVbinned;
       ccResRV->Print(Form("%s/fTest/res_%s_cat_%s_rv.png", outdir_.c_str(),proc.c_str(), flashggCats_[cat].c_str()));	
       ccResRV->Print(Form("%s/fTest/res_%s_cat_%s_rv.pdf", outdir_.c_str(),proc.c_str(), flashggCats_[cat].c_str()));	
       delete ccResRV;
@@ -612,7 +642,7 @@ int main(int argc, char *argv[]){
       cout << "[TEX] \\end{figure}" << endl;
 
 
-      // MDDB this is the original snippet of code
+      // original snippet of code for the choice
       // if (prob <rv_prob_limit){
       // 	float maxprob=-1;
       // 	for(unsigned int i =0; i<rv_results.size(); i++){
@@ -654,6 +684,8 @@ int main(int argc, char *argv[]){
       }
 
       cout <<  "[TEX] Suggested number of gaussians: " << rvChoice << endl;
+      cout <<  "MDDB RV parameters of the " << rvChoice << " gaussians " << Form("proc_cat=%s_%s", proc.c_str(), flashggCats_[cat].c_str()) << endl;
+      if (rvChoice != -1) rv_args[rvChoice-1].second->Print("s");
       cout << "[TEX] \\newpage" << endl;
 
     
@@ -668,6 +700,7 @@ int main(int argc, char *argv[]){
       prob=0.;
       std::vector<pair<int,float> > wv_results;
       std::vector<pair<int,float> > wv_chi2;
+      std::vector<pair<int,RooArgSet*> > wv_args;
       float wv_prob_limit = 999;
 
       dataWV->plotOn(plotsWV[proc][cat]);
@@ -683,81 +716,57 @@ int main(int argc, char *argv[]){
 
       //see comments in the RV section above.
       RooDataHist * dataWVbinned = new RooDataHist("dataWVbinned","dataWVbinned",*mass,*dataWV); 
-      while (prob<wv_prob_limit && order <4){ 
-
+      while (prob<wv_prob_limit && order < 5){ // MDDB make it configurable
+	        
 	// Use the  InitialFit class that will be used later for the final signal fits
 	int mhLow(125), mhHigh(125);
-	InitialFit initFitWV(mass,MH,mhLow,mhHigh,skipMasses,binnedFit,nBins);
+	if (verbose_) cout << "[INFO] Mass " << endl;
+	mass->Print();
+	MH->Print() ;
+
+	InitialFit initFitWV(mass,MH,mhLow,mhHigh,skipMasses,binnedFit,nBinsFit);
 	initFitWV.setVerbosity(5);
-	initFitWV.setVerbosity(verbose_);
-	if (verbose_) std::cout << "[INFO] WV building sum of gaussians with nGaussiansWV " << order << std::endl;
 	bool recursive = false;
-	bool forceFracUnity = false;
-	initFitWV.buildSumOfGaussians(Form("cat%d_g%d",cat,order),order,recursive,forceFracUnity);
+	initFitWV.buildSumOfGaussians(Form("cat%d_g%d",cat,order),order,recursive);
 
-	if (verbose_) std::cout << "[INFO] WV setting datasets in initialFIT " << std::endl;
 	map<int,RooDataSet*> dataSets;
-	int mh = 125;
+	int mh = 125; // just because you can have multiple mass points in InitialFit
 	dataSets.insert(pair<int,RooDataSet*>(mh,dataWV));
-
 	initFitWV.setDatasets(dataSets);    // one of these two is useless here
 	initFitWV.setDatasetsSTD(dataSets); // one of these two is useless here
-	if (verbose_) std::cout << "[INFO] WV running fits" << std::endl;
-	
+
+	if (verbose_) cout << "[INFO] fit setup: mh = " << mh << " ; mhLow = " << mhLow << " ; mhHigh = " << mhHigh << " ; binned = " << binnedFit << " ; nBinsFit = " << nBinsFit << endl;	
 	int ncpu = 1;
 	initFitWV.runFits(ncpu);
-	//	initFitWV.saveParamsToFileAtMH(Form("dat/in/%s_%s_rv.dat",proc.c_str(),cat.c_str()),constraintValueMass_);
-	//	initFitWV.plotFits(Form("%s/initialFits/%d_%d_rv",plotDir_.c_str(),proc,cat),"WV");
-	//	parlist_t fitParamsWV = initFitWV.getFitParams();
+	//MDDB fixed in InitialFit mass->setBins(nBins); // InitialFit reset the binning to 160
 
-	RooFitResult *fitRes = initFitWV.getFitResults(mh);	
-	RooAddPdf *pdf = initFitWV.getSumOfGaussians(mh);
-	mass->setBins(nBins);
+	//MDDB save params to check that the gaussian parameters are the same as the ones found in SignalFit
+	system(Form("mkdir -p %s/fTest_params",outdir_.c_str())); //MDDB 
+        initFitWV.saveParamsToFileAtMH(Form("%s/fTest_params/fTest_params_WV_proc_%s_cat_%s_g%d.txt",outdir_.c_str(),proc.c_str(), flashggCats_[cat].c_str(), order),125);
 
-	//old 
-	//old 	RooAddPdf *pdf = buildSumOfGaussians(
-	//old 					     Form("cat%d_g%d",cat,order),mass,MH,order);
-	//old 
-	//old 	// fit binned dataset
-	//old 	RooFitResult *fitRes = pdf->fitTo(*dataWVbinned,Save(true),
-	//old 					  RooFit::Minimizer("Minuit","minimize"),
-	//old 					  SumW2Error(true),Verbose(false),Range(mass_-10,mass_+10)); 
-	//old 
+	RooFitResult *fitRes = 0;
+	std::map<int,RooFitResult*> map_fitRes = initFitWV.getFitResults();
+	std::map<int,RooFitResult*>::iterator it_fitres;
+	it_fitres = map_fitRes.find(125);
+        if (it_fitres != map_fitRes.end() ) fitRes = it_fitres->second;
 	
-	// RooFitResult *fitRes = pdf->fitTo(*dataWV,
-	// 				  Save(true),RooFit::Minimizer("Minuit","minimize"),
-	// 				  SumW2Error(true),Verbose(false),Range(mass_-10,mass_+10));
+	RooAddPdf *pdf = 0;
+	std::map<int,RooAddPdf*> map_pdf = initFitWV.getSumOfGaussians();
+	std::map<int,RooAddPdf*>::iterator it_pdf;
+	it_pdf = map_pdf.find(125);
+	if (it_pdf != map_pdf.end()) pdf = it_pdf->second;
 
-	mass->setBins(nBins);
-	double myNll=0.;
-	thisNll = fitRes->minNll();
-	//double myNll = getMyNLL(mass,pdf,dataWV);
-	//thisNll = getMyNLL(mass,pdf,dataWV);
-	//RooAbsReal *nll = pdf->createNLL(*dataWV);
-	//RooMinuit m(*nll);
-	//m.migrad();
-	//thisNll = nll->getVal();
-	//plot(Form("plots/fTest/%s_cat%d_g%d_wv",
-        //  proc.c_str(),cat,order),mass_,mass,dataWV,pdf);
 
-	pdf->plotOn(plotsWV[proc][cat],LineColor(colors[order-1]));
-	chi2 = 2.*(prevNll-thisNll);
-	float chi2_bis= (plotsWV[proc][cat])->chiSquare();
-	if (chi2<0. && order>1) chi2=0.;
-	int diffInDof = (2*order+(order-1))-(2*prev_order+(prev_order-1));
-	//int diffInDof = (order-prev_order);
-	//prob = TMath::Prob(chi2,diffInDof);
-	float prob_old = TMath::Prob(chi2,diffInDof);
-	prob  = TMath::Prob(chi2_bis,2*order+(order-1));
+	cout << " WV PDF arguments" << endl;
+	RooArgSet *args = pdf->getComponents();
+	args->Print("s");
+	wv_args.push_back(std::make_pair(order,args)); 
 
-	//	dataWV->Print();
-	//	pdf->Print();
-	
+	//MDDB not necessary	mass->setBins(nBins);
 	ccResWV->cd();
 	RooPlot* frame2 = mass->frame() ;
 	dataWVbinned->plotOn(frame2);
 	pdf->plotOn(frame2);
-	//	RooPlot* frame3 = mass->frame();
 	RooHist *hres = frame2->residHist() ;
 	hres->SetMarkerStyle(24+order);
 	hres->SetMarkerColor(colors[order-1]);
@@ -803,7 +812,33 @@ int main(int argc, char *argv[]){
 	cout << "proc WV: " << proc << " cat " << flashggCats_[cat] << " order " << order << " --> Mean = " << f->GetParameter(1) << " Sigma = " << f->GetParameter(2) << " myDist = " << myDistance << " chi2 = " << fitchi2 <<  endl;
 	cout << "[TEX]  " << order << " &" << f->GetParameter(1) << " & " << f->GetParameter(2) << " & " << myDistance << " & " << fitchi2 <<  " & " << dataWVbinned->numEntries() <<  " & " << myDistance/dataWVbinned->numEntries()  << "\\\\" << endl;
 
+
       
+        //get NLL
+	double myNll=0.;
+	thisNll = fitRes->minNll();
+	//double myNll = getMyNLL(mass,pdf,dataWV);
+	//thisNll = getMyNLL(mass,pdf,dataWV);
+	//RooAbsReal *nll = pdf->createNLL(*dataWV);
+	//RooMinuit m(*nll);
+	//m.migrad();
+	//thisNll = nll->getVal();
+	//plot(Form("plots/fTest/%s_cat%d_g%d_wv",
+        //  proc.c_str(),cat,order),mass_,mass,dataWV,pdf);
+
+	pdf->plotOn(plotsWV[proc][cat],LineColor(colors[order-1]));
+	chi2 = 2.*(prevNll-thisNll);
+	float chi2_bis= (plotsWV[proc][cat])->chiSquare();
+	if (chi2<0. && order>1) chi2=0.;
+	int diffInDof = (2*order+(order-1))-(2*prev_order+(prev_order-1));
+	//int diffInDof = (order-prev_order);
+	//prob = TMath::Prob(chi2,diffInDof);
+	float prob_old = TMath::Prob(chi2,diffInDof);
+	prob  = TMath::Prob(chi2_bis,2*order+(order-1));
+
+	//	dataWV->Print();
+	//	pdf->Print();
+	
 
 
 	
@@ -815,8 +850,9 @@ int main(int argc, char *argv[]){
 	     << chi2_bis << " prob_old " << prob_old << " prob_new " 
 	     << prob <<  endl;
 
-	wv_results.push_back(std::make_pair(order,myDistance)); //MDDB
-	wv_chi2.push_back(std::make_pair(order,fitchi2)); //MDDB
+	// wv_results.push_back(std::make_pair(order,prob));
+	wv_results.push_back(std::make_pair(order,myDistance)); // MDDB
+	wv_chi2.push_back(std::make_pair(order,fitchi2));       // MDDB
 
 	prevNll=thisNll;
 	//	cache_order=order;
@@ -824,11 +860,15 @@ int main(int argc, char *argv[]){
 	order++;
       }
 
+      delete dataWVbinned;
       ccResWV->Print(Form("%s/fTest/res_%s_cat_%s_wv.png", outdir_.c_str(),proc.c_str(), flashggCats_[cat].c_str()));	
+      ccResWV->Print(Form("%s/fTest/res_%s_cat_%s_wv.pdf", outdir_.c_str(),proc.c_str(), flashggCats_[cat].c_str()));	
       delete ccResWV;
       ccPullWV->Print(Form("%s/fTest/pull_%s_cat_%s_wv.png", outdir_.c_str(),proc.c_str(), flashggCats_[cat].c_str()));	
+      ccPullWV->Print(Form("%s/fTest/pull_%s_cat_%s_wv.pdf", outdir_.c_str(),proc.c_str(), flashggCats_[cat].c_str()));	
       delete ccPullWV;
       ccpPullWV->Print(Form("%s/fTest/ppull_%s_cat_%s_wv.png", outdir_.c_str(),proc.c_str(), flashggCats_[cat].c_str()));	
+      ccpPullWV->Print(Form("%s/fTest/ppull_%s_cat_%s_wv.pdf", outdir_.c_str(),proc.c_str(), flashggCats_[cat].c_str()));	
       delete ccpPullWV;
 
       cout << "[TEX] \\end{tabular}" << endl;
@@ -847,7 +887,7 @@ int main(int argc, char *argv[]){
       cout << "[TEX] \\end{figure}" << endl;
 
 
-      // MDDB otiginal snippet of code
+      // original snippet of code for the choice
       // if (prob <wv_prob_limit){
       // 	float maxprob=-1;
       // 	for(unsigned int i =0; i<wv_results.size(); i++){
@@ -889,6 +929,8 @@ int main(int argc, char *argv[]){
       }
 
       cout <<  "[TEX] Suggested number of gaussians: " << wvChoice << endl;
+      cout <<  "MDDB WV parameters of the " << wvChoice << " gaussians " << Form("proc_cat=%s_%s", proc.c_str(), flashggCats_[cat].c_str()) << endl;
+      if (wvChoice != -1) wv_args[wvChoice-1].second->Print("s");
 
       // insert final choices!
       choices.insert(pair<string,pair<int,int> >(

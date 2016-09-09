@@ -69,9 +69,6 @@ void InitialFit::addDataset(int mh, RooDataSet *data){
 
 void InitialFit::buildSumOfGaussians(string name, int nGaussians, bool recursive, bool forceFracUnity){
 
-  cout << "In buildSumOfGaussians " << endl;
-  cout << name <<endl ;
-  cout << "allMH_.size " << allMH_.size() << endl;
   for (unsigned int i=0; i<allMH_.size(); i++){
     int mh = allMH_[i];
     MH->setConstant(false);
@@ -83,13 +80,12 @@ void InitialFit::buildSumOfGaussians(string name, int nGaussians, bool recursive
     map<string,RooAbsReal*> tempFitUtils;
     map<string,RooGaussian*> tempGaussians;
 
-    cout << "nGaussians =  " << nGaussians << endl;
+    if (verbosity_>=1) cout << "nGaussians =  " << nGaussians << endl;
     for (int g=0; g<nGaussians; g++){
       //      RooRealVar *dm = new RooRealVar(Form("dm_mh%d_g%d",mh,g),Form("dm_mh%d_g%d",mh,g),0.1,-8.,8.);
       RooRealVar *dm = new RooRealVar(Form("dm_mh%d_g%d",mh,g),Form("dm_mh%d_g%d",mh,g),0.1,-3.,3.);
       RooAbsReal *mean = new RooFormulaVar(Form("mean_mh%d_g%d",mh,g),Form("mean_mh%d_g%d",mh,g),"@0+@1",RooArgList(*MH,*dm));
 
-      // Make it as in signalFTest.cpp
       // MDDB RooRealVar *sigma = new RooRealVar(Form("sigma_mh%d_g%d",mh,g),Form("sigma_mh%d_g%d",mh,g),2.,0.4,20.);
       // MDDB every gaussian you add is larger than the previous one (this is only the starting point of the fit)
       RooRealVar *sigma = new RooRealVar(Form("sigma_mh%d_g%d",mh,g),Form("sigma_mh%d_g%d",mh,g), 1.*(g+1), 0.4,20.); 
@@ -113,7 +109,6 @@ void InitialFit::buildSumOfGaussians(string name, int nGaussians, bool recursive
         coeffs->add(*recFrac);
       }
     }
-    cout << "done  loop ngauss" << endl;    
     assert(gaussians->getSize()==nGaussians && coeffs->getSize()==nGaussians-(1*!forceFracUnity));
     RooAddPdf *tempSumOfGaussians = new RooAddPdf(Form("%s_mh%d",name.c_str(),mh),Form("%s_mh%d",name.c_str(),mh),*gaussians,*coeffs,recursive);
     sumOfGaussians.insert(pair<int,RooAddPdf*>(mh,tempSumOfGaussians));
@@ -121,7 +116,6 @@ void InitialFit::buildSumOfGaussians(string name, int nGaussians, bool recursive
     fitUtils.insert(pair<int,map<string,RooAbsReal*> >(mh,tempFitUtils));
     initialGaussians.insert(pair<int,map<string,RooGaussian*> >(mh,tempGaussians));
   }
-  cout << "done  loop mH" << endl;          
 }
 
 void InitialFit::loadPriorConstraints(string filename, float constraintValue){
@@ -165,8 +159,10 @@ void InitialFit::saveParamsToFileAtMH(string filename, int setMH){
     int mh = allMH_[i];
     for (map<string,RooRealVar*>::iterator it=fitParams[setMH].begin(); it!=fitParams[setMH].end(); it++){
       string repName = it->first;
-      repName = repName.replace(repName.find(Form("mh%d",setMH)),5,Form("mh%d",mh));
-      datfile << Form("%s %1.5f",repName.c_str(),it->second->getVal()) << endl;
+      if (mh == setMH){ // MDDB 
+	repName = repName.replace(repName.find(Form("mh%d",setMH)),5,Form("mh%d",mh));
+	datfile << Form("%s %1.5f",repName.c_str(),it->second->getVal()) << endl;
+      }
     }
   }
   datfile.close();
@@ -176,12 +172,20 @@ map<int,map<string,RooRealVar*> > InitialFit::getFitParams(){
   return fitParams;
 }
 
-RooFitResult* InitialFit::getFitResults(int i){
-  return fitResults.at(i);
+// RooFitResult* InitialFit::getFitResults(int i){
+//   return fitResults.at(i);
+// }
+
+// RooAddPdf * InitialFit::getSumOfGaussians(int i){
+//   return sumOfGaussians.at(i);
+// }
+
+std::map<int,RooFitResult*> InitialFit::getFitResults(){
+  return fitResults;
 }
 
-RooAddPdf * InitialFit::getSumOfGaussians(int i){
-  return sumOfGaussians.at(i);
+std::map<int,RooAddPdf*> InitialFit::getSumOfGaussians(){
+  return sumOfGaussians;
 }
 
 
@@ -219,6 +223,7 @@ void InitialFit::runFits(int ncpu){
     //fitModel->Print();
     //data->Print();
     RooFitResult *fitRes;
+    int originalBinning = mass->getBins();  //MDDB
     mass->setBins(bins_);
     verbosity_ >=3 ?
       fitRes = fitModel->fitTo(*data,NumCPU(ncpu),RooFit::Minimizer("Minuit","minimize"),SumW2Error(true),Save(true)) :
@@ -226,7 +231,8 @@ void InitialFit::runFits(int ncpu){
         fitRes = fitModel->fitTo(*data,NumCPU(ncpu),RooFit::Minimizer("Minuit","minimize"),SumW2Error(true),Save(true),PrintLevel(-1)) :
         fitRes = fitModel->fitTo(*data,NumCPU(ncpu),RooFit::Minimizer("Minuit","minimize"),SumW2Error(true),Save(true),PrintLevel(-1),PrintEvalErrors(-1));
     fitResults.insert(pair<int,RooFitResult*>(mh,fitRes));
-    mass->setBins(160); //return to default 
+    //MDDB    mass->setBins(160); //return to default 
+    mass->setBins(originalBinning); //return to default 
   }
 }
 
@@ -251,6 +257,7 @@ void InitialFit::plotFits(string name, string rvwv){
   TCanvas *canv = new TCanvas();
   RooPlot *plot = mass->frame(Range(mhLow_-10,mhHigh_+10));
   TPaveText *pt = new TPaveText(.65,.6,.97,.95,"NDC");
+  int originalBinning = mass->getBins();  //MDDB
   for (unsigned int i=0; i<allMH_.size(); i++){
     int mh = allMH_[i];
     MH->setConstant(false);
@@ -279,6 +286,7 @@ void InitialFit::plotFits(string name, string rvwv){
   pt->Draw();
   canv->Print(Form("%s.pdf",name.c_str()));
   canv->Print(Form("%s.png",name.c_str()));
-  mass->setBins(160); //return to default 
+  //MDDB   mass->setBins(160); //return to default 
+  mass->setBins(originalBinning);  //MDDB
   delete canv;
 }

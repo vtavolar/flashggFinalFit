@@ -103,6 +103,13 @@ RooRealVar *mass_;
 RooRealVar *dZ_;
 RooRealVar *intLumi_;
 
+// set range to be the same as FTest
+// want quite a large range otherwise don't
+// see crazy bins on the sides
+float rangeLow = 115;   // make this configurable and in Ftest too
+float rangeHigh = 135;
+
+
 void OptionParser(int argc, char *argv[]){
 	po::options_description desc1("Allowed options");
 	desc1.add_options()
@@ -270,11 +277,13 @@ RooDataSet * reduceDataset(RooDataSet *data0){
   RooDataSet *data = (RooDataSet*) data0->emptyClone()->reduce(RooArgSet(*mass_, *dZ_));
 	RooRealVar *weight0 = new RooRealVar("weight","weight",-100000,1000000);
   for (unsigned int i=0 ; i < data0->numEntries() ; i++){
-    mass_->setVal(data0->get(i)->getRealValue("CMS_hgg_mass"));
-    weight0->setVal(data0->weight() ); // <--- is this correct?
-    dZ_->setVal(data0->get(i)->getRealValue("dZ"));
-    data->add( RooArgList(*mass_, *dZ_, *weight0), weight0->getVal() );
+    if (data0->get(i)->getRealValue("CMS_hgg_mass") > rangeLow && data0->get(i)->getRealValue("CMS_hgg_mass") <rangeHigh ){
+      mass_->setVal(data0->get(i)->getRealValue("CMS_hgg_mass"));
+      weight0->setVal(data0->weight() ); // <--- is this correct?
+      dZ_->setVal(data0->get(i)->getRealValue("dZ"));
+      data->add( RooArgList(*mass_, *dZ_, *weight0), weight0->getVal() );
     }
+  }
 return data;
 }
 
@@ -284,13 +293,15 @@ RooDataSet * rvwvDataset(RooDataSet *data0, string rvwv){
   RooDataSet *dataWV = (RooDataSet*) data0->emptyClone()->reduce(RooArgSet(*mass_, *dZ_));
 	RooRealVar *weight0 = new RooRealVar("weight","weight",-100000,1000000);
   for (unsigned int i=0 ; i < data0->numEntries() ; i++){
-    mass_->setVal(data0->get(i)->getRealValue("CMS_hgg_mass"));
-    weight0->setVal(data0->weight() ); // <--- is this correct?
-    dZ_->setVal(data0->get(i)->getRealValue("dZ"));
-    if (dZ_->getVal() <1.){
-      dataRV->add( RooArgList(*mass_, *dZ_, *weight0), weight0->getVal() );
-    } else{
-      dataWV->add( RooArgList(*mass_, *dZ_, *weight0), weight0->getVal() );
+    if (data0->get(i)->getRealValue("CMS_hgg_mass") > rangeLow && data0->get(i)->getRealValue("CMS_hgg_mass") < rangeHigh ){
+      mass_->setVal(data0->get(i)->getRealValue("CMS_hgg_mass"));
+      weight0->setVal(data0->weight() ); // <--- is this correct?
+      dZ_->setVal(data0->get(i)->getRealValue("dZ"));
+      if (dZ_->getVal() <1.){
+	dataRV->add( RooArgList(*mass_, *dZ_, *weight0), weight0->getVal() );
+      } else{
+	dataWV->add( RooArgList(*mass_, *dZ_, *weight0), weight0->getVal() );
+      }
     }
   }
   if (rvwv.compare("RV") ==0){
@@ -315,10 +326,12 @@ RooDataSet * intLumiReweigh(RooDataSet *data0 /*original dataset*/){
   RooDataSet *data = (RooDataSet*) data0->emptyClone();
 	RooRealVar *weight0 = new RooRealVar("weight","weight",-100000,1000000);
   for (int i = 0; i < data0->numEntries(); i++) {
-    mass_->setVal(data0->get(i)->getRealValue("CMS_hgg_mass"));
-    dZ_->setVal(data0->get(i)->getRealValue("dZ"));
-    weight0->setVal(factor * data0->weight() ); // <--- is this correct?
-    data->add( RooArgList(*mass_, *dZ_, *weight0), weight0->getVal() );
+    if (data0->get(i)->getRealValue("CMS_hgg_mass") > rangeLow && data0->get(i)->getRealValue("CMS_hgg_mass") < rangeHigh ){      
+      mass_->setVal(data0->get(i)->getRealValue("CMS_hgg_mass"));
+      dZ_->setVal(data0->get(i)->getRealValue("dZ"));
+      weight0->setVal(factor * data0->weight() ); // <--- is this correct?
+      data->add( RooArgList(*mass_, *dZ_, *weight0), weight0->getVal() );
+    }
   }
   if (verbose_) std::cout << "[INFO] Old dataset (before intLumi change): " << *data0 << std::endl;
   if (verbose_) std::cout << "[INFO] New dataset (intLumi change x"<< factor <<"): " << *data << std::endl;
@@ -335,6 +348,11 @@ bool skipMass(int mh){
 
 int main(int argc, char *argv[]){
 
+  int   minNevts    = 500; // if below minNevts #gauss = -1
+
+  // Bins for fitting
+  int nBinsFit_ = 160; // MDDB make it a parameter
+  
 
 	gROOT->SetBatch();
 
@@ -362,21 +380,20 @@ int main(int argc, char *argv[]){
   // open sig file
 	//TFile *inFile = TFile::Open(filename_[0].c_str());
 
-  // extract nEvents per proc/tag etc...
-	if (checkYields_){
-	  
+  // print out nEvents per proc/tag etc...
+  if (checkYields_){	  
     WSTFileWrapper * inWS0 = new WSTFileWrapper(filenameStr_,"tagsDumper/cms_hgg_13TeV");
-		std::list<RooAbsData*> data =  (inWS0->allData()) ;
-		for (std::list<RooAbsData*>::const_iterator iterator = data.begin(), end = data.end();
-      iterator != end;
-      ++iterator) {
-        RooDataSet *dataset = dynamic_cast<RooDataSet *>( *iterator );
-        if (dataset) {
-	        std::cout <<  dataset->GetName() << "," << dataset->sumEntries() << std::endl;
-        }
-		}
-		return 1;
-	}
+    std::list<RooAbsData*> data =  (inWS0->allData()) ;
+    for (std::list<RooAbsData*>::const_iterator iterator = data.begin(), end = data.end();
+	 iterator != end;
+	 ++iterator) {
+      RooDataSet *dataset = dynamic_cast<RooDataSet *>( *iterator );
+      if (dataset) {
+	std::cout << "dataset / numEntries / sumEntries " <<  dataset->GetName() << " , " << dataset->sumEntries() << " , " << dataset->numEntries() << std::endl;
+      }
+    }
+    return 1;
+  }
 
   //time to open the signal file for the main script!
 	WSTFileWrapper *inWS;
@@ -571,33 +588,45 @@ int main(int argc, char *argv[]){
       RooDataSet *dataWV; 
       RooDataSet *dataRVRef; 
       RooDataSet *dataWVRef; 
-      RooDataSet *dataRef;  
+      RooDataSet *dataRef;  // MDDB not used
       RooDataSet *data0Ref;  
       RooDataSet *data;  
-      RooDataHist *dataH;  
+      RooDataHist *dataH;   // MDDB not used
 
-        if (verbose_)std::cout << "[INFO] Opening dataset called "<< Form("%s_%d_13TeV_%s",proc.c_str(),mh,cat.c_str()) << " in in WS " << inWS << std::endl;
-        RooDataSet *data0   = reduceDataset((RooDataSet*)inWS->data(Form("%s_%d_13TeV_%s",proc.c_str(),mh,cat.c_str())));
-        data = intLumiReweigh(data0);
-        if (verbose_) std::cout << "[INFO] Old dataset (before intLumi change): " << *data0 << std::endl;
+      if (verbose_)std::cout << "[INFO] Opening dataset called "<< Form("%s_%d_13TeV_%s",proc.c_str(),mh,cat.c_str()) << " in in WS " << inWS << std::endl;
+      RooDataSet *data0   = reduceDataset((RooDataSet*)inWS->data(Form("%s_%d_13TeV_%s",proc.c_str(),mh,cat.c_str())));
+      data = intLumiReweigh(data0);
+      if (verbose_) std::cout << "[INFO] Old dataset (before intLumi change): " << *data0 << std::endl;
 
-        dataRV = rvwvDataset(data,"RV"); 
-        dataWV = rvwvDataset(data,"WV"); 
-
-        if (verbose_) std::cout << "[INFO] Datasets ? " << *data << std::endl;
-        if (verbose_) std::cout << "[INFO] Datasets (right vertex) ? " << *dataRV << std::endl;
-        if (verbose_) std::cout << "[INFO] Datasets (wrong vertex) ? " << *dataWV << std::endl;
+      dataRV = rvwvDataset(data,"RV"); 
+      dataWV = rvwvDataset(data,"WV"); 
+      
+      // // BASIC CHECK
+      // if (mh == 125) {
+      // 	for (unsigned int i=0 ; i < dataRV->numEntries() ; i++){	
+      // 	  if (dataRV->get(i)->getRealValue("CMS_hgg_mass") > rangeLow && dataRV->get(i)->getRealValue("CMS_hgg_mass") <rangeHigh ){
+      // 	    mass_->setVal(dataRV->get(i)->getRealValue("CMS_hgg_mass"));
+      // 	    RooRealVar *weight0 = new RooRealVar("weight","weight",-100000,1000000);
+      // 	    weight0->setVal(dataRV->weight() ); 
+      // 	    dZ_->setVal(dataRV->get(i)->getRealValue("dZ"));
+      // 	    cout << "BASIC " << mass_->getVal() << " " << dZ_->getVal() << " " << weight0->getVal() << endl;
+      // 	  }
+      // 	}
+      // }
+      if (verbose_) std::cout << "[INFO] Datasets ? " << *data << std::endl;
+      if (verbose_) std::cout << "[INFO] Datasets (right vertex) ? " << *dataRV << std::endl;
+      if (verbose_) std::cout << "[INFO] Datasets (wrong vertex) ? " << *dataWV << std::endl;
         
         float nEntriesRV =dataRV->numEntries();
         float sEntriesRV= dataRV->sumEntries();
         float nEntriesWV =dataWV->numEntries();
         float sEntriesWV= dataWV->sumEntries(); // count the number of entries and total weight on the RV/WV datasets
         
-        // if there are few atcual entries or if there is an  overall negative sum of weights...
-        // or if it was specified that one should use the replacement dataset, then need to replace!
-        if (nEntriesRV < 200 || sEntriesRV < 0 || ( userSkipRV)){
-          std::cout << "[INFO] too few entries to use for fits in RV! nEntries " << nEntriesRV << " sumEntries " << sEntriesRV << "userSkipRV " << userSkipRV<< std::endl;
-          isProblemCategory=true;
+      // if there are few atcual entries or if there is an  overall negative sum of weights...
+      // or if it was specified that one should use the replacement dataset, then need to replace!
+      if (nEntriesRV <   minNevts  || sEntriesRV < 0 || ( userSkipRV)){
+	std::cout << "[INFO] too few entries to use for fits in RV! nEntries " << nEntriesRV << " sumEntries " << sEntriesRV << "userSkipRV " << userSkipRV<< std::endl;
+	isProblemCategory=true;
           
           int thisProcCatIndex = getIndexOfReferenceDataset(proc,cat);
           
@@ -630,11 +659,11 @@ int main(int argc, char *argv[]){
           dataRVRef=(RooDataSet*) dataRV->Clone();
         }
         
-      
-        // if there are few atcual entries or if there is an  overall negative sum of weights...
-        // or if it was specified that one should use the replacement dataset, then need to replace!
-        if (nEntriesWV < 200 || sEntriesWV < 0 || (userSkipWV)){
-          std::cout << "[INFO] too few entries to use for fits in WV! nEntries " << nEntriesWV << " sumEntries " << sEntriesWV << "userSkipWV " << userSkipWV << std::endl;
+          
+      // if there are few atcual entries or if there is an  overall negative sum of weights...
+      // or if it was specified that one should use the replacement dataset, then need to replace!
+      if (nEntriesWV < minNevts || sEntriesWV < 0 || (userSkipWV)){
+	std::cout << "[INFO] too few entries to use for fits in WV! nEntries " << nEntriesWV << " sumEntries " << sEntriesWV << "userSkipWV " << userSkipWV << std::endl;
         
           //things are simpler this time, since almost all WV are bad aside from ggh-UntaggedTag3
          //and anyway the shape of mgg in the WV shoudl be IDENTICAL across all Tags.
@@ -703,16 +732,21 @@ int main(int argc, char *argv[]){
     // these guys do the fitting
     // right vertex
     if (verbose_) std::cout << "[INFO] preapraing initialfit RV" << std::endl;
-    InitialFit initFitRV(mass_,MH,mhLow_,mhHigh_,skipMasses_,binnedFit_,nBins_);
+    mass_->Print();
+    MH->Print() ;
+
+    InitialFit initFitRV(mass_,MH,mhLow_,mhHigh_,skipMasses_,binnedFit_,nBinsFit_); //     InitialFit initFitRV(mass_,MH,mhLow_,mhHigh_,skipMasses_,binnedFit_,nBins_);
     initFitRV.setVerbosity(verbose_);
     if (!cloneFits_) {
       if (verbose_) std::cout << "[INFO] RV building sum of gaussians with nGaussiansRV " << nGaussiansRV << std::endl;
+      if (verbose_) cout << " INITFIT " << Form("%s_%s",proc.c_str(),cat.c_str()) << " " << nGaussiansRV <<  " " << recursive_ << endl;
       initFitRV.buildSumOfGaussians(Form("%s_%s",proc.c_str(),cat.c_str()),nGaussiansRV,recursive_);
-      if (verbose_) std::cout << "[INFO] RV setting datasets in initialFIT " << std::endl;
       initFitRV.setDatasets(FITdatasetsRV);
       initFitRV.setDatasetsSTD(datasetsRV);
-      if (verbose_) std::cout << "[INFO] RV running fits" << std::endl;
-      initFitRV.runFits(ncpu_);
+
+      if (verbose_) cout << "[INFO] fit setup: mhLow = " << mhLow_ << " ; mhHigh = " << mhHigh_ << " ; binned = " << binnedFit_ << " ; nBinsFit = " << nBinsFit_ << endl;      
+      initFitRV.runFits(ncpu_);      
+
       if (!runInitialFitsOnly_ && !replace_) {
         initFitRV.saveParamsToFileAtMH(Form("dat/in/%s_%s_rv.dat",proc.c_str(),cat.c_str()),constraintValueMass_);
         initFitRV.loadPriorConstraints(Form("dat/in/%s_%s_rv.dat",proc.c_str(),cat.c_str()),constraintValue_);
@@ -723,11 +757,19 @@ int main(int argc, char *argv[]){
       }
       if (!skipPlots_) initFitRV.plotFits(Form("%s/initialFits/%s_%s_rv",plotDir_.c_str(),proc.c_str(),cat.c_str()),"RV");
     }
+    //MDDB save params to check that the gaussian parameters are the same as the ones found in SignalFit
+    system(Form("mkdir -p %s/../SigFit_params",plotDir_.c_str()));   // MDDB a bit silly path...
+    initFitRV.saveParamsToFileAtMH(Form("%s/../SigFit_params/SigFit_params_RV_proc_%s_cat_%s_g%d.txt", plotDir_.c_str(), proc.c_str(), cat.c_str(), nGaussiansRV),125);
+    
     parlist_t fitParamsRV = initFitRV.getFitParams();
 
     // wrong vertex
-    if (verbose_) std::cout << "[INFO] preparing initialfi tWV" << std::endl;
-    InitialFit initFitWV(mass_,MH,mhLow_,mhHigh_,skipMasses_,binnedFit_,nBins_);
+    if (verbose_) std::cout << "[INFO] preparing initialfit WV" << std::endl;
+    mass_->Print();
+    MH->Print() ;
+
+    InitialFit initFitWV(mass_,MH,mhLow_,mhHigh_,skipMasses_,binnedFit_,nBinsFit_); //     InitialFit initFitWV(mass_,MH,mhLow_,mhHigh_,skipMasses_,binnedFit_,nBins_);
+
     initFitWV.setVerbosity(verbose_);
     if (!cloneFits_) {
       if (verbose_) std::cout << "[INFO] WV building sum of gaussians wth nGaussiansWV "<< nGaussiansWV << std::endl;
@@ -735,8 +777,10 @@ int main(int argc, char *argv[]){
       if (verbose_) std::cout << "[INFO] WV setting datasets in initial FIT " << std::endl;
       initFitWV.setDatasets(FITdatasetsWV);
       initFitWV.setDatasetsSTD(datasetsWV);
-      if (verbose_) std::cout << "[INFO] WV running fits" << std::endl;
+
+      if (verbose_) cout << "[INFO] fit setup: mhLow = " << mhLow_ << " ; mhHigh = " << mhHigh_ << " ; binned = " << binnedFit_ << " ; nBinsFit = " << nBinsFit_ << endl;      
       initFitWV.runFits(ncpu_);
+
       if (!runInitialFitsOnly_ && !replace_) {
         initFitWV.saveParamsToFileAtMH(Form("dat/in/%s_%s_wv.dat",proc.c_str(),cat.c_str()),constraintValueMass_);
         initFitWV.loadPriorConstraints(Form("dat/in/%s_%s_wv.dat",proc.c_str(),cat.c_str()),constraintValue_);
@@ -747,6 +791,10 @@ int main(int argc, char *argv[]){
       }
       if (!skipPlots_) initFitWV.plotFits(Form("%s/initialFits/%s_%s_wv",plotDir_.c_str(),proc.c_str(),cat.c_str()),"WV");
     }
+    //MDDB save params to check that the gaussian parameters are the same as the ones found in SignalFit
+    cout << "MDDB save parameters WV "  << endl; 
+    initFitWV.saveParamsToFileAtMH(Form("%s/../SigFit_params/SigFit_params_WV_proc_%s_cat_%s_g%d.txt",plotDir_.c_str() , proc.c_str(), cat.c_str(), nGaussiansWV),125);
+
     parlist_t fitParamsWV = initFitWV.getFitParams();
 
     allParameters[ make_pair(proc,cat) ] = make_pair(fitParamsRV,fitParamsWV);

@@ -42,5 +42,4 @@ mv all.pdf $DIR.pdf
 rm all.tex
 rm all.aux
 rm all.log
-rm sub*.log.pdf
 

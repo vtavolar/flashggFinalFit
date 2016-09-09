@@ -34,8 +34,10 @@ class InitialFit {
     void plotFits(std::string name, std::string rvwn="");
     void setVerbosity(int v);
     void setFitParams(std::map<int,std::map<std::string,RooRealVar*> >& pars );
-    RooFitResult* getFitResults(int i);
-    RooAddPdf * getSumOfGaussians(int i); 
+    /* RooFitResult* getFitResults(int i); */
+    /* RooAddPdf * getSumOfGaussians(int i);  */
+    std::map<int,RooFitResult*> getFitResults();
+    std::map<int,RooAddPdf*>    getSumOfGaussians(); 
 
   private:
 
