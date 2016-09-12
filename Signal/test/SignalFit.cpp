@@ -88,11 +88,17 @@ vector<string>  split_;
 string  splitStr_;
 float newIntLumi_;
 float originalIntLumi_;
-string referenceProc_="ggh";
-string referenceProcWV_="ggh";
-string referenceProcTTH_="tth";
-string referenceTagWV_="UntaggedTag_2";
-string referenceTagRV_="UntaggedTag_2";
+string referenceProc_   = "ggh";
+string referenceProcWV_ = "ggh";
+
+string referenceProcGGH_= "ggh"; //make these configurables
+string referenceProcVBF_= "vbf";
+string referenceProcWH_ = "wh";
+string referenceProcZH_ = "zh";
+string referenceProcTTH_= "tth";
+
+string referenceTagWV_  = "UntaggedTag_2";
+string referenceTagRV_  = "UntaggedTag_2";
 vector<string> map_proc_;
 vector<string> map_cat_;
 vector<string> map_replacement_proc_;
@@ -348,37 +354,37 @@ bool skipMass(int mh){
 
 int main(int argc, char *argv[]){
 
-  int   minNevts    = 500; // if below minNevts #gauss = -1
+  int   minNevts    = 500; // if below minNevts #gauss = -1  //deflaut is ggh UntaggedTag3
 
   // Bins for fitting
-  int nBinsFit_ = 160; // MDDB make it a parameter
+  int nBinsFit_ = 160; //  //deflaut is ggh UntaggedTag3MDDB make it a parameter
   
 
-	gROOT->SetBatch();
+  gROOT->SetBatch();
 
-	OptionParser(argc,argv);
+  OptionParser(argc,argv);
 
-	TStopwatch sw;
-	sw.Start();
+  TStopwatch sw;
+  sw.Start();
 
   // reference details for low stats cats
   // need to make this configurable ?! -LC
   referenceProc_="ggh";
-  referenceProcTTH_="tth";
+  //  referenceProcTTH_="tth"; // MDDB
   referenceTagWV_="UntaggedTag_2"; // histest stats WV is ggh Untagged 3. 
   referenceTagRV_="UntaggedTag_2"; // fairly low resolution tag even for ggh, more approprioate as te default than re-using the original tag.
   // are WV which needs to borrow should be taken from here
   
   // isFlashgg should now be the only option.
-	if (isFlashgg_){ 
+  if (isFlashgg_){ 
     nCats_= flashggCats_.size();
-	} else {
+  } else {
     std::cout << "[ERROR] script is onyl compatible with flashgg! exit(1)." << std::endl;
     exit(1);
   }
   
   // open sig file
-	//TFile *inFile = TFile::Open(filename_[0].c_str());
+  //TFile *inFile = TFile::Open(filename_[0].c_str());
 
   // print out nEvents per proc/tag etc...
   if (checkYields_){	  
@@ -396,41 +402,41 @@ int main(int argc, char *argv[]){
   }
 
   //time to open the signal file for the main script!
-	WSTFileWrapper *inWS;
-	if (isFlashgg_){
+  WSTFileWrapper *inWS;
+  if (isFlashgg_){
     inWS = new WSTFileWrapper(filenameStr_,"tagsDumper/cms_hgg_13TeV");
-		std::list<RooAbsData*> test =  (inWS->allData()) ;
-		if (verbose_) {
-			std::cout << " [INFO] WS contains " << std::endl;
-			for (std::list<RooAbsData*>::const_iterator iterator = test.begin(), end = test.end(); iterator != end; ++iterator) {
-		//		std::cout << **iterator << std::endl;
-			}
-		}
-	} else {
+    std::list<RooAbsData*> test =  (inWS->allData()) ;
+    if (verbose_) {
+      std::cout << " [INFO] WS contains " << std::endl;
+      for (std::list<RooAbsData*>::const_iterator iterator = test.begin(), end = test.end(); iterator != end; ++iterator) {
+	//		std::cout << **iterator << std::endl;
+      }
+    }
+  } else {
     std::cout << "[ERROR] script is only compatible with flashgg! exit(1)." << std::endl;
     exit(1);
   }
 	
-	if (inWS) { 
-   if (verbose_)  std::cout << "[INFO] Workspace opened correctly" << std::endl;
+  if (inWS) { 
+    if (verbose_)  std::cout << "[INFO] Workspace opened correctly" << std::endl;
   } else { 
     std::cout << "[EXIT] Workspace is null pointer. exit" << std::endl; 
     exit(1);
   }
   
   // get the required variables from the WS
-	mass_ = (RooRealVar*)inWS->var("CMS_hgg_mass");
+  mass_ = (RooRealVar*)inWS->var("CMS_hgg_mass");
   mass_->SetTitle("m_{#gamma#gamma}");
-	mass_->setUnit("GeV");
-	dZ_ = (RooRealVar*)inWS->var("dZ");
+  mass_->setUnit("GeV");
+  dZ_ = (RooRealVar*)inWS->var("dZ");
   intLumi_ = (RooRealVar*)inWS->var("IntLumi");
   originalIntLumi_ =(intLumi_->getVal());// specify in 1/pb
   newIntLumi_ = newIntLumi_*1000; // specify in 1/pb instead of 1/fb.
   intLumi_->setVal(newIntLumi_); 
 
-	//RooRealVar *weight = (RooRealVar*)inWS->var("weight:weight");
+  //RooRealVar *weight = (RooRealVar*)inWS->var("weight:weight");
   if( mass_ && dZ_ && intLumi_){
-	  if (verbose_) std::cout << "[INFO] RooRealVars mass, intL and dZ, found ? " << mass_ << ", " << intLumi_  << ", "<< dZ_<<  std::endl;
+    if (verbose_) std::cout << "[INFO] RooRealVars mass, intL and dZ, found ? " << mass_ << ", " << intLumi_  << ", "<< dZ_<<  std::endl;
   } else {
     std::cout << "[ERROR] could not find some of these RooRealVars in WS: mass_ " << mass_ << " dZ " << dZ_ << " intLumi " << intLumi_<< ".  exit(1) "<< std::endl;
     exit(1);
@@ -438,104 +444,154 @@ int main(int argc, char *argv[]){
   
   if (verbose_) std::cout << "[INFO] setting RoorealVars used for fitting."<< std::endl;
   RooRealVar *MH = new RooRealVar("MH","m_{H}",mhLow_,mhHigh_);
-	MH->setUnit("GeV");
-	MH->setConstant(true);
-	RooRealVar *MH_SM = new RooRealVar("MH_SM","m_{H} (SM)",mhLow_,mhHigh_);
-	MH_SM->setConstant(true);
-	RooRealVar *DeltaM = new RooRealVar("DeltaM","#Delta m_{H}",0.,-10.,10.);
-	DeltaM->setUnit("GeV");
-	DeltaM->setConstant(true);
-	RooAddition *MH_2 = new RooAddition("MH_2","m_{H} (2)",RooArgList(*MH,*DeltaM));
-	RooRealVar *higgsDecayWidth = new RooRealVar("HiggsDecayWidth","#Gamma m_{H}",0.,0.,10.);
-	higgsDecayWidth->setConstant(true);
+  MH->setUnit("GeV");
+  MH->setConstant(true);
+  RooRealVar *MH_SM = new RooRealVar("MH_SM","m_{H} (SM)",mhLow_,mhHigh_);
+  MH_SM->setConstant(true);
+  RooRealVar *DeltaM = new RooRealVar("DeltaM","#Delta m_{H}",0.,-10.,10.);
+  DeltaM->setUnit("GeV");
+  DeltaM->setConstant(true);
+  RooAddition *MH_2 = new RooAddition("MH_2","m_{H} (2)",RooArgList(*MH,*DeltaM));
+  RooRealVar *higgsDecayWidth = new RooRealVar("HiggsDecayWidth","#Gamma m_{H}",0.,0.,10.);
+  higgsDecayWidth->setConstant(true);
   
   //prepare teh output file!
   if (verbose_) std::cout << "[INFO] preparing outfile "<< outfilename_<< std::endl;
-	TFile *outFile = new TFile(outfilename_.c_str(),"RECREATE");
-	RooWorkspace *outWS;
+  TFile *outFile = new TFile(outfilename_.c_str(),"RECREATE");
+  RooWorkspace *outWS;
 
-	if (isFlashgg_) outWS = new RooWorkspace("wsig_13TeV");
+  if (isFlashgg_) outWS = new RooWorkspace("wsig_13TeV");
 	
   RooWorkspace *mergeWS = 0;
-	TFile *mergeFile = 0;
+  TFile *mergeFile = 0;
 	
   // maybe this is no longer needed ? -LC
   if(!mergefilename_.empty()) {
-		mergeFile = TFile::Open(mergefilename_.c_str());
-		if (is2011_) mergeWS = (RooWorkspace*)mergeFile->Get("wsig_7TeV");
-		else  mergeWS = (RooWorkspace*)mergeFile->Get("wsig_8TeV");
-	}
+    mergeFile = TFile::Open(mergefilename_.c_str());
+    if (is2011_) mergeWS = (RooWorkspace*)mergeFile->Get("wsig_7TeV");
+    else  mergeWS = (RooWorkspace*)mergeFile->Get("wsig_8TeV");
+  }
   
   // i'm gonna comemnt this otu and see if anythign breaks... -LC
-	//transferMacros(inFile,outFile);
+  //transferMacros(inFile,outFile);
   
   //splines for RV/WV
-	clonemap_t cloneSplinesMapRV;
-	clonemap_t cloneSplinesMapWV;
+  clonemap_t cloneSplinesMapRV;
+  clonemap_t cloneSplinesMapWV;
 
   // make the output dir
-	system(Form("mkdir -p %s/initialFits",plotDir_.c_str()));
-	system("mkdir -p dat/in");
-	parmap_t allParameters;
+  system(Form("mkdir -p %s/initialFits",plotDir_.c_str()));
+  system("mkdir -p dat/in");
+  parmap_t allParameters;
 
-	// Prepare the list of <proc> <tag> <nRV> <nWV> entries
-	ifstream datfile;
-	datfile.open(datfilename_.c_str());
-	if (datfile.fail()) {
-		std::cerr << "[ERROR] Could not open " << datfilename_ <<std::endl;
-		exit(1);
-	}
+  // Prepare the list of <proc> <tag> <nRV> <nWV> entries
+  ifstream datfile;
+  datfile.open(datfilename_.c_str());
+  if (datfile.fail()) {
+    std::cerr << "[ERROR] Could not open " << datfilename_ <<std::endl;
+    exit(1);
+  }
 
   if (verbose_) std::cout << "[INFO] openign dat file "<< datfile<< std::endl;
   //loop over it 
-	while (datfile.good()){
-		string line;
-		getline(datfile,line);
-		if (line=="\n" || line.substr(0,1)=="#" || line==" " || line.empty()) continue;
-		vector<string> els;
-		split(els,line,boost::is_any_of(" "));
-		if( els.size()!=4 && els.size()!=6 ) {
-			cerr << "Malformed line " << line << " " << els.size() <<endl;
-			assert(0);
-		}
-
+  while (datfile.good()){
+    string line;
+    getline(datfile,line);
+    if (line=="\n" || line.substr(0,1)=="#" || line==" " || line.empty()) continue;
+    vector<string> els;
+    split(els,line,boost::is_any_of(" "));
+    if( els.size()!=4 && els.size()!=6 ) {
+      cerr << "Malformed line " << line << " " << els.size() <<endl;
+      assert(0);
+    }
+    
     // the defaukt info need: proc, tag, nRv, nrWV
-		string proc = els[0];
-		string cat = els[1]; // used to be an int, string directly now...
-		int nGaussiansRV = boost::lexical_cast<int>(els[2]);
-		int nGaussiansWV = boost::lexical_cast<int>(els[3]);
-
-		replace_ = false; // old method of replacing from Matt and Nick
+    string proc = els[0];
+    string cat = els[1]; // used to be an int, string directly now...
+    int nGaussiansRV = boost::lexical_cast<int>(els[2]);
+    int nGaussiansWV = boost::lexical_cast<int>(els[3]);
+    
+    replace_ = false; // old method of replacing from Matt and Nick
     // have a different appraoch now but could re-use machinery.
+    
+    cout << " MDDB initial string "  ;
+    for (int i = 0 ;i <  els.size() ; ++i) cout << els[i] << " " ;
+    cout << endl;
 
-		if( els.size()==6 ) { // in this case you have specified a replacement tag!
-			replaceWith_ = make_pair(els[4],els[5]); // proc, cat
-			replace_ = true;
+    if( els.size()==6 ) { // in this case you have specified a replacement tag!
+      cout << " MDDB REPLACEMENT TAG ! : proc = " << proc << " cat =  " << cat  << endl;
+      replaceWith_ = make_pair(els[4],els[5]); // proc, cat
+      cout << " MDDB REPLACE WITH : proc = " << els[4] << " cat =  " << els[5]  << endl;
+      replace_ = true;
       map_replacement_proc_.push_back(els[4]);
       map_replacement_cat_.push_back(els[5]);
     } else {
       // if no replacement is speficied, use defaults
       if (cat.compare(0,3,"TTH") ==0){
-       // if the cat starts with TTH, use TTH reference process.
-       // howwver this is over-riden later if the WV needs to be replaced
-       // as even teh TTH tags in WV has limited stats
-       map_replacement_proc_.push_back(referenceProcTTH_);
-       map_replacement_cat_.push_back(cat);
-     } else {
-       // else use the ggh
-       map_replacement_proc_.push_back(referenceProc_);
-       map_replacement_cat_.push_back(referenceTagRV_); //deflaut is ggh UntaggedTag3
-     }
-   }
-   if (verbose_) std::cout << "[INFO] dat file listing: "<< proc << " " << cat << " " << nGaussiansRV << " " << nGaussiansWV <<  " " << std::endl;
-   if (verbose_) std::cout << "[INFO] dat file listing: ----> selected replacements if needed " <<  map_replacement_proc_[map_replacement_proc_.size() -1] << " " <<  map_replacement_cat_[map_replacement_cat_.size() -1] << std::endl;
+	// if the cat starts with TTH, use TTH reference process.
+	// howwver this is over-riden later if the WV needs to be replaced
+	// as even teh TTH tags in WV has limited stats
+	map_replacement_proc_.push_back(referenceProcTTH_);
+	map_replacement_cat_.push_back(cat);
+	cout << " MDDB USE STD REPLACEMENTS: proc = " << referenceProcTTH_ << " cat =  " << cat  << endl;      
+      } else if (cat.compare(0,3,"VBF") ==0){
+	map_replacement_proc_.push_back(referenceProcVBF_);
+	map_replacement_cat_.push_back(cat);
+	cout << " MDDB USE STD REPLACEMENTS: proc = " << referenceProcVBF_ << " cat =  " << cat  << endl;      
+      } else if (cat.compare(0,3,"ZH") ==0){
+	// not implemented yet
+      } else if (cat.compare(0,3,"WH") ==0){
+	// not implemented yet
+      }
+      else{
+	// else use the ggh
+	map_replacement_proc_.push_back(referenceProcGGH_);
+	map_replacement_cat_.push_back(cat);
+	cout << " MDDB USE STD REPLACEMENTS: proc = " << referenceProcGGH_ << " cat =  " << cat  << endl;      
+      }
 
+      //MDDB       // if no replacement is speficied, use defaults
+      //MDDB       if (cat.compare(0,3,"TTH") ==0){
+      //MDDB 	// if the cat starts with TTH, use TTH reference process.
+      //MDDB 	// howwver this is over-riden later if the WV needs to be replaced
+      //MDDB 	// as even teh TTH tags in WV has limited stats
+      //MDDB 	cout << " MDDB it's TTH " << endl;	
+      //MDDB 	map_replacement_proc_.push_back(referenceProcTTH_);
+      //MDDB 	cout << " MDDB pushed reference proc " << referenceProcTTH_  << endl;
+      //MDDB 	map_replacement_cat_.push_back(cat);
+      //MDDB 	cout << " MDDB pushed reference cat " << cat << endl;
+      //MDDB       } else {
+      //MDDB 	// else use the ggh
+      //MDDB 	cout << " MDDB else use ggh "  << endl;
+      //MDDB 	map_replacement_proc_.push_back(referenceProc_);
+      //MDDB 	cout << " MDDB pushed reference proc " << referenceProc_  << endl;
+      //MDDB 	map_replacement_cat_.push_back(referenceTagRV_); //deflaut is ggh UntaggedTag3
+      //MDDB 	cout << " MDDB pushed reference cat " << referenceTagRV_  << endl;
+      //MDDB       }
+    }
+    if (verbose_) std::cout << "[INFO] dat file listing: "<< proc << " " << cat << " " << nGaussiansRV << " " << nGaussiansWV <<  " " << std::endl;
+    if (verbose_) std::cout << "[INFO] dat file listing: ----> selected replacements if needed " <<  map_replacement_proc_[map_replacement_proc_.size() -1] << " " <<  map_replacement_cat_[map_replacement_cat_.size() -1] << std::endl;
+    
     map_proc_.push_back(proc);
     map_cat_.push_back(cat);
     map_nG_rv_.push_back(nGaussiansRV);
     map_nG_wv_.push_back(nGaussiansWV);
   }
-  
+
+
+  // MDDB 
+  cout << "MDDB see what's inside " <<  endl;
+  cout << "map_proc" << endl;
+  for (int i = 0 ; i< map_proc_.size() ; ++i){
+    cout << map_proc_[i]  << " " ;
+    cout << map_cat_[i]   <<  " " ;
+    cout << map_nG_rv_[i] << " " ;
+    cout << map_nG_wv_[i] << " \t" ;    
+    cout << map_replacement_proc_[i] << " " ;
+    cout << map_replacement_cat_[i] << endl;
+  }
+
+
   // now start the proper loop, so loop over teh maps we filled above.
   for (unsigned int iLine = 0 ; iLine < map_proc_.size() ; iLine++){
     string proc = map_proc_[iLine] ;
@@ -553,7 +609,7 @@ int main(int argc, char *argv[]){
       if ( proc.compare(splitProc) == 0 ) {
         if (verbose_) std::cout << " [INFO] --> proc matches! Check if this cat " << cat  << " matches splitCat " << splitCat<< ": " << (cat.compare(splitCat)==0) <<  std::endl; 
         if ( cat.compare(splitCat) == 0 ) {
-        if (verbose_) std::cout << " [INFO]     --> cat matches too ! so we process it "<<  std::endl; 
+	  if (verbose_) std::cout << " [INFO]     --> cat matches too ! so we process it "<<  std::endl; 
           continueFlag =0; 
         }
       }
@@ -617,47 +673,47 @@ int main(int argc, char *argv[]){
       if (verbose_) std::cout << "[INFO] Datasets (right vertex) ? " << *dataRV << std::endl;
       if (verbose_) std::cout << "[INFO] Datasets (wrong vertex) ? " << *dataWV << std::endl;
         
-        float nEntriesRV =dataRV->numEntries();
-        float sEntriesRV= dataRV->sumEntries();
-        float nEntriesWV =dataWV->numEntries();
-        float sEntriesWV= dataWV->sumEntries(); // count the number of entries and total weight on the RV/WV datasets
+      float nEntriesRV =dataRV->numEntries();
+      float sEntriesRV= dataRV->sumEntries();
+      float nEntriesWV =dataWV->numEntries();
+      float sEntriesWV= dataWV->sumEntries(); // count the number of entries and total weight on the RV/WV datasets
         
       // if there are few atcual entries or if there is an  overall negative sum of weights...
       // or if it was specified that one should use the replacement dataset, then need to replace!
       if (nEntriesRV <   minNevts  || sEntriesRV < 0 || ( userSkipRV)){
-	std::cout << "[INFO] too few entries to use for fits in RV! nEntries " << nEntriesRV << " sumEntries " << sEntriesRV << "userSkipRV " << userSkipRV<< std::endl;
+	std::cout << "[INFO] too few entries to use for fits in RV! nEntries " << nEntriesRV << " sumEntries " << sEntriesRV << " userSkipRV " << userSkipRV<< std::endl;
 	isProblemCategory=true;
           
-          int thisProcCatIndex = getIndexOfReferenceDataset(proc,cat);
+	int thisProcCatIndex = getIndexOfReferenceDataset(proc,cat);
           
-          string replancementProc = map_replacement_proc_[thisProcCatIndex];
-          string replancementCat = map_replacement_cat_[thisProcCatIndex];
-          int replacementIndex = getIndexOfReferenceDataset(replancementProc,replancementCat);
-          nGaussiansRV= map_nG_rv_[replacementIndex]; // if ==-1, want it to stay that way!
-          std::cout << "[INFO] try to use  dataset for " << replancementProc << ", " << replancementCat << " instead."<< std::endl;
+	string replancementProc = map_replacement_proc_[thisProcCatIndex];
+	string replancementCat = map_replacement_cat_[thisProcCatIndex];
+	int replacementIndex = getIndexOfReferenceDataset(replancementProc,replancementCat);
+	nGaussiansRV= map_nG_rv_[replacementIndex]; // if ==-1, want it to stay that way!
+	std::cout << "[INFO] try to use  dataset for " << replancementProc << ", " << replancementCat << " instead."<< std::endl;
           
-          //pick the dataset for the replacement proc and cat, reduce it (ie remove pdfWeights etc) ,
-          //reweight for lumi, and then get the RV events only.
-          data0Ref   = rvwvDataset(
-                        intLumiReweigh(
-                          reduceDataset(
-                          (RooDataSet*)inWS->data(Form("%s_%d_13TeV_%s",replancementProc.c_str(),mh,replancementCat.c_str()))
-                         )
-                       ), "RV"
-                      );
-          if (data0Ref) {
-           std::cout << "[INFO] Found replacement dataset for RV:" << *data0Ref<< std::endl;
-          } else {
-           std::cout << "[ERROR] could not find replacement dataset for RV... " <<  std::endl;
-           exit(1);
-          }
+	//pick the dataset for the replacement proc and cat, reduce it (ie remove pdfWeights etc) ,
+	//reweight for lumi, and then get the RV events only.
+	data0Ref   = rvwvDataset(
+				 intLumiReweigh(
+						reduceDataset(
+							      (RooDataSet*)inWS->data(Form("%s_%d_13TeV_%s",replancementProc.c_str(),mh,replancementCat.c_str()))
+							      )
+						), "RV"
+				 );
+	if (data0Ref) {
+	  std::cout << "[INFO] Found replacement dataset for RV:" << *data0Ref<< std::endl;
+	} else {
+	  std::cout << "[ERROR] could not find replacement dataset for RV... " <<  std::endl;
+	  exit(1);
+	}
 
-          dataRVRef=(RooDataSet*) data0Ref->Clone();
-          std::cout << "[INFO] RV: replacing dataset for FITTING with new one ("<< *dataRVRef <<"), but keeping name of "<< *data0 << std::endl;
-        //  dataRVRef->SetName(data0->GetName());
-        } else { // if the dataset was fine to begin with, make the reference dataset the original
-          dataRVRef=(RooDataSet*) dataRV->Clone();
-        }
+	dataRVRef=(RooDataSet*) data0Ref->Clone();
+	std::cout << "[INFO] RV: replacing dataset for FITTING with new one ("<< *dataRVRef <<"), but keeping name of "<< *data0 << std::endl;
+	dataRVRef->SetName(data0->GetName()); // MDDB why this was commented out ?
+      } else { // if the dataset was fine to begin with, make the reference dataset the original
+	dataRVRef=(RooDataSet*) dataRV->Clone();
+      }
         
           
       // if there are few atcual entries or if there is an  overall negative sum of weights...
@@ -665,33 +721,33 @@ int main(int argc, char *argv[]){
       if (nEntriesWV < minNevts || sEntriesWV < 0 || (userSkipWV)){
 	std::cout << "[INFO] too few entries to use for fits in WV! nEntries " << nEntriesWV << " sumEntries " << sEntriesWV << "userSkipWV " << userSkipWV << std::endl;
         
-          //things are simpler this time, since almost all WV are bad aside from ggh-UntaggedTag3
-         //and anyway the shape of mgg in the WV shoudl be IDENTICAL across all Tags.
-         int replacementIndex = getIndexOfReferenceDataset(referenceProcWV_,referenceTagWV_);
+	//things are simpler this time, since almost all WV are bad aside from ggh-UntaggedTag3
+	//and anyway the shape of mgg in the WV shoudl be IDENTICAL across all Tags.
+	int replacementIndex = getIndexOfReferenceDataset(referenceProcWV_,referenceTagWV_);
         nGaussiansWV= map_nG_wv_[replacementIndex]; 
         
-         //pick the dataset for the replacement proc and cat, reduce it (ie remove pdfWeights etc) ,
-         //reweight for lumi and then get the WV events only.
-         data0Ref   = rvwvDataset(
-                        intLumiReweigh(
-                          reduceDataset(
-                          (RooDataSet*)inWS->data(Form("%s_%d_13TeV_%s",referenceProcWV_.c_str(),mh,referenceTagWV_.c_str()))
-                         )
-                       ), "WV"
-                      );
-          if (data0Ref) {
-           std::cout << "[INFO] Found replacement dataset for WV:" << *data0Ref<< std::endl;
-          } else { // if the dataset was fine to begin with, make the reference dataset the original
-           std::cout << "[ERROR] could not find replacement dataset for WV... " <<  std::endl;
-           exit(1);
-          }
+	//pick the dataset for the replacement proc and cat, reduce it (ie remove pdfWeights etc) ,
+	//reweight for lumi and then get the WV events only.
+	data0Ref   = rvwvDataset(
+				 intLumiReweigh(
+						reduceDataset(
+							      (RooDataSet*)inWS->data(Form("%s_%d_13TeV_%s",referenceProcWV_.c_str(),mh,referenceTagWV_.c_str()))
+							      )
+						), "WV"
+				 );
+	if (data0Ref) {
+	  std::cout << "[INFO] Found replacement dataset for WV:" << *data0Ref<< std::endl;
+	} else { // if the dataset was fine to begin with, make the reference dataset the original
+	  std::cout << "[ERROR] could not find replacement dataset for WV... " <<  std::endl;
+	  exit(1);
+	}
 
-          dataWVRef = (RooDataSet*) data0Ref->Clone();
-          std::cout << "[INFO] WV: replacing dataset for FITTING with new one ("<< *dataWVRef <<"), but keeping name of "<< *data0 << std::endl;
-         // dataWVRef->SetName(data0->GetName());
-        } else {
-          dataWVRef=(RooDataSet*) dataWV->Clone();
-        }
+	dataWVRef = (RooDataSet*) data0Ref->Clone();
+	std::cout << "[INFO] WV: replacing dataset for FITTING with new one ("<< *dataWVRef <<"), but keeping name of "<< *data0 << std::endl;
+	dataWVRef->SetName(data0->GetName()); // MDDB why this was commented out ?
+      } else {
+	dataWVRef=(RooDataSet*) dataWV->Clone();
+      }
 
 
       if (verbose_) std::cout << "[INFO] inserting regular RV dataset " << *dataRV<< std::endl;
@@ -711,24 +767,30 @@ int main(int argc, char *argv[]){
     TString check="";
     for (std::map<int,RooDataSet*>::iterator it=FITdatasetsRV.begin(); it!=FITdatasetsRV.end(); ++it){
       if (check=="") {
-       TString name=it->second->GetName();
-        check = name.ReplaceAll(TString(Form("%d",it->first)),TString(""));
-       } else {
-       TString name=it->second->GetName();
-       assert (check ==name.ReplaceAll(TString(Form("%d",it->first)),TString("")) );
-       }
+	TString name=it->second->GetName();
+	cout << "MDDB check RV name " << name << endl; 
+	check = name.ReplaceAll(TString(Form("%d",it->first)),TString(""));
+	cout << "MDDB check RV == null " << check << endl; 
+      } else {
+	TString name=it->second->GetName();
+	cout << "MDDB check RV else check = " << check << "   name = " << name << "    replaceAll = " << name.ReplaceAll(TString(Form("%d",it->first)),TString("")) << endl; 
+	assert (check ==name.ReplaceAll(TString(Form("%d",it->first)),TString("")) );
+      }
     }
     check="";
     for (std::map<int,RooDataSet*>::iterator it=FITdatasetsWV.begin(); it!=FITdatasetsWV.end(); ++it){
       if (check=="") {
-       TString name=it->second->GetName();
+	TString name=it->second->GetName();
+	cout << "MDDB check WV name " << name << endl; 
         check = name.ReplaceAll(TString(Form("%d",it->first)),TString(""));
-       } else {
-       TString name=it->second->GetName();
-       assert (check ==name.ReplaceAll(TString(Form("%d",it->first)),TString("")) );
-       }
+	cout << "MDDB check WV == null " << check << endl; 
+      } else {
+	TString name=it->second->GetName();
+	cout << "MDDB check WV else check = " << check << "   name = " << name << "    replaceAll = " << name.ReplaceAll(TString(Form("%d",it->first)),TString("")) << endl; 
+	assert (check ==name.ReplaceAll(TString(Form("%d",it->first)),TString("")) );
+      }
     }
-
+    
     // these guys do the fitting
     // right vertex
     if (verbose_) std::cout << "[INFO] preapraing initialfit RV" << std::endl;
@@ -847,8 +909,8 @@ int main(int argc, char *argv[]){
         finalModel.getNormalization();
         if (!skipPlots_) finalModel.plotPdf(plotDir_);
         finalModel.save(outWS);
+      }
     }
-  }
   }
   datfile.close();
 
@@ -856,6 +918,7 @@ int main(int argc, char *argv[]){
   cout << "[INFO] Whole fitting process took..." << endl;
   cout << "\t";
   sw.Print();
+
 
   if (!runInitialFitsOnly_) { 
     sw.Start();
