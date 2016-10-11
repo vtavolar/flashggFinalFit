@@ -343,8 +343,11 @@ def writePreamble(sub_file):
     sub_file.write('cp -p %s .\n'%os.path.abspath(file))
 
 def writePostamble(sub_file, exec_line):
-
-  #print "[INFO] writing to postamble"
+  print "[INFO] writing to postamble"
+  print "bacth"
+  print opts.batch
+  opts.batch = "T3CH"
+  opts.queue = "all.q"
   if opts.S0: exec_line += ' -S 0 '
   if (opts.batch == "IC"):
       exec_line += ' &> /scratch/$USER/wn_log.txt'
@@ -360,12 +363,17 @@ def writePostamble(sub_file, exec_line):
   sub_file.write('rm -rf scratch_$number\n')
   sub_file.close()
   system('chmod +x %s'%os.path.abspath(sub_file.name))
-  if not opts.dryRun and opts.queue:
+  if not opts.dryRun and opts.queue or True:
+    print "sumbtting jobs"  
     system('rm -f %s.done'%os.path.abspath(sub_file.name))
     system('rm -f %s.fail'%os.path.abspath(sub_file.name))
     system('rm -f %s.log'%os.path.abspath(sub_file.name))
     if (opts.batch == "LSF") : system('bsub -q %s -o %s.log %s'%(opts.queue,os.path.abspath(sub_file.name),os.path.abspath(sub_file.name)))
     if (opts.batch == "IC") : system('qsub -l h_vmem=6g -q %s -o %s.log -e %s.err %s > out.txt'%(opts.queue,os.path.abspath(sub_file.name),os.path.abspath(sub_file.name),os.path.abspath(sub_file.name)))
+    if (opts.batch == "T3CH") : 
+        print "we submit on t3 batch"
+        system('qsub -l h_vmem=6g -q %s -o %s.log -e %s.err %s > out.txt'%(opts.queue,os.path.abspath(sub_file.name),os.path.abspath(sub_file.name),os.path.abspath(sub_file.name)))
+        print 'qsub -l h_vmem=6g -q %s -o %s.log -e %s.err %s > out.txt'%(opts.queue,os.path.abspath(sub_file.name),os.path.abspath(sub_file.name),os.path.abspath(sub_file.name))
     #if (opts.batch == "IC") : system('qsub %s -q %s -o %s.log '%(os.path.abspath(sub_file.name),opts.queue,os.path.abspath(sub_file.name)))
   if opts.runLocal:
     if opts.parallel:
@@ -796,10 +804,13 @@ def writeMultiDimFit(method=None,wsOnly=False):
         # make job scripts
         for i in range(opts.jobs):
           file = open('%s/sub_m%1.5g_job%d.sh'%(opts.outDir,getattr(opts,"mh",0.),i),'w')
-          writePreamble(file)
+          writePreambleT3(file)
+          print file
           exec_line = 'combine %s  -M MultiDimFit --cminDefaultMinimizerType Minuit2 --cminDefaultMinimizerAlgo migrad --algo=grid  %s --points=%d --firstPoint=%d --lastPoint=%d -n %sJob%d'%(opts.datacard,combine_args[method],opts.pointsperjob*opts.jobs,i*opts.pointsperjob,(i+1)*opts.pointsperjob-1,method,i)
-          if ("FloatMH" in opts.outDir) : exec_line += " --saveSpecifiedNuis MH" 
-          if method in par_ranges.keys(): exec_line+=" --setPhysicsModelParameterRanges %s "%(par_ranges[method])
+          print exec_line
+          if ("FloatMH" in opts.outDir) : exec_line += " --saveSpecifiedNuis MH"
+          if not "--setPhysicsModelParameters" in opts.additionalOptions:
+              if method in par_ranges.keys(): exec_line+=" --setPhysicsModelParameterRanges %s "%(par_ranges[method])
           if getattr(opts,"mh",None): exec_line += ' -m %6.2f'%opts.mh
           #if opts.expected: exec_line += ' -t -1 --freezeNuisances=JetVeto_migration0,JetVeto_migration1,pdfindex_UntaggedTag_0_13TeV,pdfindex_UntaggedTag_1_13TeV,pdfindex_UntaggedTag_2_13TeV,pdfindex_UntaggedTag_3_13TeV,pdfindex_VBFTag_0_13TeV,pdfindex_VBFTag_1_13TeV'
           if opts.expected: exec_line += ' -t -1 '
@@ -808,8 +819,11 @@ def writeMultiDimFit(method=None,wsOnly=False):
           if opts.expectSignal: exec_line += ' --expectSignal %4.2f'%opts.expectSignal
           if opts.expectSignalMass: exec_line += ' --expectSignalMass %6.2f'%opts.expectSignalMass
           if opts.additionalOptions: exec_line += ' %s'%opts.additionalOptions
+          print opts.additionalOptions
           if opts.toysFile: exec_line += ' --toysFile %s'%opts.toysFile
           if opts.verbose: print '\t', exec_line
+#          if opts.additionalOptions: exec_line += ' %s'%opts.additionalOptions
+          print exec_line
           writePostamble(file,exec_line)
       
         opts.datacard = backupcard 
@@ -899,6 +913,7 @@ def configure(config_line):
       else: opts.poix = option.split('=')[1]
     if option.startswith('muLow='): opts.muLow = float(option.split('=')[1])
     if option.startswith('muHigh='): opts.muHigh = float(option.split('=')[1])
+    if option.startswith('profileMH='): opts.profileMH = bool(option.split('=')[1])
     if option.startswith('rvLow='): opts.rvLow = float(option.split('=')[1])
     if option.startswith('rvHigh='): opts.rvHigh = float(option.split('=')[1])
     if option.startswith('rfLow='): opts.rfLow = float(option.split('=')[1])
@@ -914,9 +929,11 @@ def configure(config_line):
     if option.startswith('wspace='): opts.wspace = str(option.split('=')[1])
     if option.startswith('catRanges='): opts.catRanges = str(option.split('=')[1])
     if option.startswith('nBins='): opts.nBins = int(option.split('=')[1])
-    if option.startswith('freezeAll='): opts.freezeAll = int(option.split('=')[1])
+    if option.startswith('freezeAll='): opts.freezeAll = bool(option.split('=')[1])
     if option.startswith('float='): opts.float = str(option.split('=')[1])
     if option.startswith('opts='): 
+      print "BREAK addoptstr BREAK"
+      print option
       addoptstr = option.split("=")[1:]
       addoptstr = "=".join(addoptstr)
       opts.additionalOptions =  addoptstr.replace('+',' ')
