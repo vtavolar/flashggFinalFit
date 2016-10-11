@@ -6,6 +6,8 @@ EXT="auto"; #extensiom for all folders and files created by this script
 PROCS="ggh"
 CATS="UntaggedTag_0,UntaggedTag_1,UntaggedTag_2,UntaggedTag_3,UntaggedTag_4,VBFTag_0,VBFTag_1,VBFTag_2"
 SCALES="HighR9EE,LowR9EE,HighR9EB,LowR9EB"
+SCALESCORR="MaterialCentral,MaterialForward"
+SCALESGLOBAL="NonLinearity,Geant4,LightYield,Absolute"
 SMEARS="HighR9EE,LowR9EE,HighR9EB,LowR9EB" #DRY RUN
 FTESTONLY=0
 CALCPHOSYSTONLY=0
@@ -14,6 +16,8 @@ SIGPLOTSONLY=0
 INTLUMI=1
 BATCH=""
 DEFAULTQUEUE=""
+BS=""
+MHREF=""
 
 usage(){
 	echo "The script runs three signal scripts in this order:"
@@ -32,6 +36,7 @@ usage(){
 		echo "--sigPlotsOnly) "
 		echo "--intLumi) specified in fb^-{1} (default $INTLUMI)) "
 		echo "--batch) which batch system to use (None (''),LSF,IC) (default '$BATCH')) "
+		echo "--MHref)  reference mh for xsec ) "
 }
 
 
@@ -39,7 +44,7 @@ usage(){
 
 
 # options may be followed by one colon to indicate they have a required argument
-if ! options=$(getopt -u -o hi:p:f: -l help,inputFile:,procs:,smears:,scales:,flashggCats:,ext:,fTestOnly,calcPhoSystOnly,sigFitOnly,sigPlotsOnly,intLumi:,batch: -- "$@")
+if ! options=$(getopt -u -o hi:p:f: -l help,inputFile:,procs:,bs:,smears:,scales:,scalesCorr:,scalesGlobal:,flashggCats:,ext:,fTestOnly,calcPhoSystOnly,sigFitOnly,sigPlotsOnly,intLumi:,batch:,MHref: -- "$@")
 then
 # something went wrong, getopt will put out an error message for us
 exit 1
@@ -54,6 +59,9 @@ case $1 in
 -p|--procs) PROCS=$2; shift ;;
 --smears) SMEARS=$2; shift ;;
 --scales) SCALES=$2; shift ;;
+--scalesCorr) SCALESCORR=$2; shift ;;
+--scalesGlobal) SCALESGLOBAL=$2; shift ;;
+--bs) BS=$2; shift ;;
 -f|--flashggCats) CATS=$2; shift ;;
 --ext) EXT=$2; echo "test" ; shift ;;
 --fTestOnly) FTESTONLY=1; echo "ftest" ;;
@@ -62,6 +70,7 @@ case $1 in
 --sigPlotsOnly) SIGPLOTSONLY=1;;
 --intLumi) INTLUMI=$2; shift ;;
 --batch) BATCH=$2; shift;;
+--MHref) MHREF=$2; shift;;
 
 (--) shift; break;;
 (-*) usage; echo "$0: error - unrecognized option $1" 1>&2; usage >> /dev/stderr; exit 1;;
@@ -95,6 +104,20 @@ DEFAULTQUEUE=1nh
 fi
 if [[ $BATCH == "T3CH" ]]; then
 DEFAULTQUEUE=all.q
+fi
+
+if [[ $BS == "" ]]; then
+echo "NO BS SPECIFIED"
+else
+echo "BS IS $BS"
+BSOPT=" --bs $BS"
+fi
+
+if [[ $MHREF == "" ]]; then
+echo "NO MHREF SPECIFIED IN SIGNAL SH"
+else
+echo "MHREF IS $MHREF"
+MHREFOPT=" --MHref $MHREF"
 fi
 ####################################################
 ################## SIGNAL F-TEST ###################
@@ -164,8 +187,8 @@ if [ $CALCPHOSYSTONLY == 1 ]; then
   echo "-->Determine effect of photon systematics"
   echo "=============================="
 
-  echo "./bin/calcPhotonSystConsts --doPlots true -i $FILE -o dat/photonCatSyst_$EXT.dat -p $PROCS -s $SCALES -r $SMEARS -D $OUTDIR -f $CATS" -v 1
-  ./bin/calcPhotonSystConsts --doPlots true -i $FILE -o dat/photonCatSyst_$EXT.dat -p $PROCS -s $SCALES -r $SMEARS -D $OUTDIR -f $CATS -v 1
+  echo "./bin/calcPhotonSystConsts --doPlots true -i $FILE -o dat/photonCatSyst_$EXT.dat -p $PROCS -s $SCALES -S $SCALESCORR -g $SCALESGLOBAL -r $SMEARS -D $OUTDIR -f $CATS"
+  ./bin/calcPhotonSystConsts --doPlots true -i $FILE -o dat/photonCatSyst_$EXT.dat -p $PROCS -s $SCALES -S $SCALESCORR -g $SCALESGLOBAL -r $SMEARS -D $OUTDIR -f $CATS 
   cp dat/photonCatSyst_$EXT.dat $OUTDIR/dat/copy_photonCatSyst_$EXT.dat
 fi
 ####################################################
@@ -180,11 +203,11 @@ if [ $SIGFITONLY == 1 ]; then
 
 
   if [[ $BATCH == "" ]]; then
-    echo "./bin/SignalFit -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 -s dat/photonCatSyst_$EXT.dat --procs $PROCS -o $OUTDIR/CMS-HGG_mva_13TeV_sigfit.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI "
-    ./bin/SignalFit -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 -s dat/photonCatSyst_$EXT.dat --procs $PROCS -o $OUTDIR/CMS-HGG_mva_13TeV_sigfit.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI #--pdfWeights 26
+    echo "./bin/SignalFit -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 -s dat/photonCatSyst_$EXT.dat --procs $PROCS -o $OUTDIR/CMS-HGG_mva_13TeV_sigfit.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI $MHREFOPT"
+    ./bin/SignalFit -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 -s dat/photonCatSyst_$EXT.dat --procs $PROCS -o $OUTDIR/CMS-HGG_mva_13TeV_sigfit.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI $MHREFOPT #--pdfWeights 26 
   else
-    echo " ./python/submitSignalFit.py -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 -s dat/photonCatSyst_$EXT.dat --procs $PROCS -o $OUTDIR/CMS-HGG_sigfit_$EXT.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI --batch $BATCH -q $DEFAULTQUEUE "
-    ./python/submitSignalFit.py -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 -s dat/photonCatSyst_$EXT.dat --procs $PROCS -o $OUTDIR/CMS-HGG_sigfit_$EXT.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI --batch $BATCH -q $DEFAULTQUEUE
+    echo " ./python/submitSignalFit.py -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 -s dat/photonCatSyst_$EXT.dat --procs $PROCS -o $OUTDIR/CMS-HGG_sigfit_$EXT.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI --batch $BATCH -q $DEFAULTQUEUE $BSOPT "
+    ./python/submitSignalFit.py -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 -s dat/photonCatSyst_$EXT.dat --procs $PROCS -o $OUTDIR/CMS-HGG_sigfit_$EXT.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI --batch $BATCH -q $DEFAULTQUEUE $BSOPT $MHREFOPT
 
     PEND=`ls -l $OUTDIR/sigfit/SignalFitJobs/sub*| grep -v "\.run" | grep -v "\.done" | grep -v "\.fail" | grep -v "\.err" |grep -v "\.log"  |wc -l`
     echo "PEND $PEND"
