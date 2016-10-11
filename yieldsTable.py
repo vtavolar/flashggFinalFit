@@ -53,7 +53,7 @@ options.factor=float(options.factor)
 with open(options.input) as i:
   lines  = i.readlines()
   for line in lines:
-    #print line
+    print line
     if "intLumi" in line: lumi=float(line[line.find("value")+6:])
     if "pdfWeight" in line : continue 
     line=line.replace("Tag_","Tag ")
