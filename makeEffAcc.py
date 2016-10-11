@@ -394,7 +394,7 @@ MG.GetXaxis().SetTitleOffset(0.7)
 MG.GetXaxis().SetRangeUser(120.1,129.9)
 #MG.GetXaxis().SetRangeUser(120.0,130)
 MG.GetYaxis().SetTitle("Efficiency #times Acceptance (%)")
-MG.GetYaxis().SetRangeUser(32.3,39.2)
+MG.GetYaxis().SetRangeUser(29.3,36.2)
 MG.GetYaxis().SetTitleSize(0.055)
 MG.GetYaxis().SetTitleOffset(0.7)
 mytext.DrawLatex(0.1,0.92,"#scale[1.15]{CMS} #bf{#it{Simulation Preliminary}}") #for some reason the bf is reversed??
