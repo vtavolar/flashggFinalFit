@@ -6,6 +6,9 @@ import sys
 import shlex
 import array 
 
+sys.path.append("/mnt/t3nfs01/data01/shome/vtavolar/FinalFits/CMSSW_7_1_5/src/flashggFinalFit/")
+from readXsec import getXSgraph
+
 from optparse import OptionParser
 parser = OptionParser()
 parser.add_option("-d","--datfile",dest="datfile",help="Read from datfile")
@@ -22,6 +25,7 @@ parser.add_option("","--MHtext",dest="MHtext",default=[],action='append',help="A
 parser.add_option("","--blacklistMH",dest="blacklistMH",default=[],action='append',type='float',help="Kill an MH value (limits, pvals, Mu vs MH etc)")
 
 parser.add_option("","--xlab",dest="xlab",type="string",default="",help="Label for x-axis")
+parser.add_option("","--ylab",dest="ylab",type="string",default="",help="Label for y-axis")
 parser.add_option("","--xvar",dest="xvar",type="string",default=[],action="append",help="Branch in TTree to pick up as 'x'")
 parser.add_option("-e","--expected",dest="expected",default=False,action="store_true",help="Expected only")
 parser.add_option("-m","--method",dest="method",type="string",help="Method to run")
@@ -46,6 +50,7 @@ parser.add_option("","--pval",dest="pval",default=False,action="store_true",help
 parser.add_option("","--maxlh",dest="maxlh",default=False,action="store_true",help="Do best fit mu plot")
 parser.add_option("","--mh",dest="mh",default=False,action="store_true",help="Do NLL mass scan plot")
 parser.add_option("","--mu",dest="mu",default=False,action="store_true",help="Do NLL mu scan plot")
+parser.add_option("","--muExpr",dest="muExpr",default="r",action="store",help="expression for mu")
 parser.add_option("","--rv",dest="rv",default=False,action="store_true",help="Do NLL rv scan plot")
 parser.add_option("","--rf",dest="rf",default=False,action="store_true",help="Do NLL rf scan plot")
 parser.add_option("","--draw2dhist",dest="draw2dhist",default=False,action="store_true",help="Ue 2D hist drawing for the 2D NLL")
@@ -64,6 +69,8 @@ parser.add_option("-b","--batch",dest="batch",default=False,action="store_true")
 parser.add_option("--it",dest="it",type="string",help="if using superloop, index of iteration")
 parser.add_option("--itLedger",dest="itLedger",type="string",help="ledger to keep track of values of each iteration if using superloop")
 parser.add_option("--scalex",dest="scalex",default="1",type="string",help="rescale x axis by a factor")
+parser.add_option("--probMeas",dest="probmeas",default=False,action="store_true",help="use likelihood as prob meas")
+parser.add_option("--scanfromtxt",dest="scanfromtxt",type="string",help="use likelihood as prob meas")
 (options,args)=parser.parse_args()
 
 print "[INFO] Processing Files :"
@@ -94,6 +101,8 @@ if not options.datfile and options.method not in allowed_methods:
   sys.exit()
 
 import ROOT as r
+from ROOT import TGraph
+import numpy
 outf = r.TFile('%s.root'%options.outname,'RECREATE')
 
 # Load and use the Hgg Paper style
@@ -210,7 +219,7 @@ def drawGlobals(canv,shifted=False):
    lat.DrawLatex(0.129+0.085,0.93,"#bf{CMS} #scale[0.75]{#it{Preliminary}}")
    lat.DrawLatex(0.129+0.085+0.04,0.85,"H#rightarrow#gamma#gamma")
    lat.SetTextSize(0.045)
-   lat.DrawLatex(0.67-0.005,0.93,options.text)
+   lat.DrawLatex(0.62,0.93,options.text)
    #lat.DrawLatex(0.7,0.93,options.text)
 
   else:
@@ -218,10 +227,10 @@ def drawGlobals(canv,shifted=False):
    #lat.DrawLatex(0.129,0.93,"CMS H#rightarrow#gamma#gamma")
    #lat.DrawLatex(0.173,0.85,"#splitline{#bf{CMS}}{#it{Preliminary}}")
    lat.DrawLatex(0.129,0.93,"#bf{CMS} #scale[0.75]{#it{Preliminary}}")
-   lat.DrawLatex(0.129+0.04,0.85,"H#rightarrow#gamma#gamma")
+   lat.DrawLatex(0.129+0.04,0.85,"H#rightarrow#gamma#gamma, profiling m_{H}")
    #lat.SetTextSize(0.07)
    lat.SetTextSize(0.045)
-   lat.DrawLatex(0.62,0.933,options.text)
+   lat.DrawLatex(0.60,0.933,options.text)
 
   for mi,MH in enumerate(MHtexts):
     lat.DrawLatex(mhTextX[mi],mhTextY[mi],MH)
@@ -746,7 +755,7 @@ def plot1DNLL(returnErrors=False,xvar="", ext=""):
     #x = 'mh'
     xtitle = 'm_{H} (GeV)'
   elif options.method=='mu':
-    x = 'r'
+    x = options.muExpr
     #xtitle = '#sigma / #sigma_{SM}'
     xtitle = '#mu'
     if options.xlab: 
@@ -781,9 +790,10 @@ def plot1DNLL(returnErrors=False,xvar="", ext=""):
     leg.AddEntry(gr,options.names[k],'L')
     
     res=[]
+    xFormula = r.TTreeFormula('x',x,tree)
     for i in range(tree.GetEntries()):
       tree.GetEntry(i)
-      xv = getattr(tree,x)
+      xv = xFormula.EvalInstance()
       if options.scalex != '':
         xv = xv*float(options.scalex)
       if (hasattr(tree,"MH")):
@@ -852,8 +862,20 @@ def plot1DNLL(returnErrors=False,xvar="", ext=""):
     eminus = m-l
     eplus2 = h2-m
     eminus2 = m-l2
+    
+    import math
+    if options.probmeas:
+      sumexpL = 0.
+      expValL = 0.    
+      x = r.Double()
+      y = r.Double()
+      for bin in range(gr.GetN()):
+        gr.GetPoint(bin,x,y)
+        expValL += x*math.exp(-y/2.)
+        sumexpL += math.exp(-y/2.)
+      xmin = expValL/sumexpL
 
-    print "%15s : %4.4f +%4.4g -%4.4g" % ( ntitle+" "+ext, xmin, eplus , eminus )
+    print "best fit %15s : %4.4f +%4.4g -%4.4g" % ( str(x)+" "+ext, xmin, eplus , eminus )
     #Write in the ledger
     #with open(options.itLedger, "a") as myfile:
 		#    myfile.write("%s %f %f %f\n" % ( options.method+" "+options.it, xmin, eplus , eminus ))
@@ -895,6 +917,40 @@ def plot1DNLL(returnErrors=False,xvar="", ext=""):
     else: gr.GetYaxis().SetRangeUser(float(options.yaxis.split(',')[0]),float(options.yaxis.split(',')[1]))
     gr.Draw("L")
 
+  gXS = getXSgraph()
+  xXS = gXS.GetX()
+#  print xXS[0]
+  yXS = gXS.GetY()
+  eupyXS = gXS.GetEYhigh()
+  edownyXS = gXS.GetEYlow()
+  xsecSM      =0.
+  xsecSMeup   =0.
+  xsecSMedown =0.
+#  print yXS
+  for xmass in range(gXS.GetN()):
+    if xXS[xmass] != 125.1:
+      continue
+    else:
+#      print xXS[xmass]
+#      print yXS[xmass]
+#      print eupyXS[xmass]
+#      print edownyXS[xmass]
+      xsecSM      =      yXS[xmass]
+      xsecSMeup   =      eupyXS[xmass]
+      xsecSMedown =      edownyXS[xmass]
+  from ROOT import TBox
+  bSM = TBox(xsecSM-xsecSMedown, dH.GetYaxis().GetXmin(), xsecSM+xsecSMeup, 6.)
+  bSM.SetFillColor(r.kRed)
+  bSM.SetFillStyle(3245)
+  r.gStyle.SetHatchesSpacing(0.9)
+  bSM.Draw('same')
+  from ROOT import TLine
+  bSMcentral = TLine(xsecSM, dH.GetYaxis().GetXmin(), xsecSM, 6.)
+  bSMcentral.SetLineColor(r.kRed)
+  bSMcentral.SetLineWidth(2)
+  bSMcentral.Draw('same')
+
+  
   # draw legend
   if len(options.files)>1:
     leg.Draw('same')
@@ -905,6 +961,8 @@ def plot1DNLL(returnErrors=False,xvar="", ext=""):
     l.SetLineColor(13)
     l.Draw('same')  
 
+    
+
   # draw fit value
   lat2 = r.TLatex()
   lat2.SetNDC()
@@ -914,7 +972,20 @@ def plot1DNLL(returnErrors=False,xvar="", ext=""):
     lat2.SetTextSize(0.045)
     lat2.SetTextAlign(11)
 #    lat2.DrawLatex(0.17,0.78,"#hat{#mu} = %4.2f ^{#font[122]{+}%4.2f}_{#font[122]{-}%4.2f}"%(fit,eplus0,eminus0))
-    lat2.DrawLatex(0.17,0.78,"#hat{#sigma}_{fid} = %4.1f ^{#font[122]{+}%4.1f}_{#font[122]{-}%4.1f} fb"%(fit,eplus0,eminus0))
+    lat2.DrawLatex(0.17,0.78,"#hat{#sigma}_{fid} = %4.0f ^{#font[122]{+}%4.0f}_{#font[122]{-}%4.0f} fb"%(fit,eplus0,eminus0))
+    lat2.DrawLatex(0.24,0.73,"#scale[0.8]{HXSWG YR4}")
+    lat2.DrawLatex(0.24,0.70,"#scale[0.8]{+ aMC@NLO}")
+    lat2.DrawLatex(0.24,0.672,"#scale[0.7]{m_{H}=125.09 GeV}")
+
+    bSMleg = TBox(33., 4.48, 37., 4.74)
+    bSMleg.SetFillColor(r.kRed)
+    bSMleg.SetFillStyle(3245)
+    r.gStyle.SetHatchesSpacing(0.9)
+    bSMleg.Draw('same')
+    bSMlegcentral = TLine(33., 4.61, 37., 4.61)
+    bSMlegcentral.SetLineColor(r.kRed)
+    bSMlegcentral.SetLineWidth(2)
+    bSMlegcentral.Draw('same')
   elif options.method=='rv': lat2.DrawLatex(0.5,0.85,"#hat{#mu}_{qqH+VH} = %4.2f ^{#font[122]{+}%4.2f}_{#font[122]{-}%4.2f}"%(fit,eplus0,eminus0))
   elif options.method=='rf': lat2.DrawLatex(0.5,0.85,"#hat{#mu}_{ggH+ttH} = %4.2f ^{#font[122]{+}%4.2f}_{#font[122]{-}%4.2f}"%(fit,eplus0,eminus0))
 
@@ -937,11 +1008,12 @@ def plot2DNLL(xvar="RF",yvar="RV",xtitle="#mu_{ggH+ttH}",ytitle="#mu_{qqH+VH}"):
   canv = r.TCanvas("%s_%s"%(xvar,yvar),"%s_%s"%(xvar,yvar),750,750)
   canv.SetTicks(1,1)
   BFgrs  = []
+  CONTBF = []
   CONT1grs = []
   CONT2grs  = []
   COLgrs = []
   
-  if not options.legend: leg = r.TLegend(0.7,0.7,0.88,0.88)
+  if not options.legend: leg = r.TLegend(0.38,0.65,0.85,0.88)
   #if not options.legend: leg = r.TLegend(0.05,0.05,0.4,0.4)
   else: leg = r.TLegend(float(options.legend.split(',')[0]),float(options.legend.split(',')[1]),float(options.legend.split(',')[2]),float(options.legend.split(',')[3]))
   #leg.SetFillColor(10)
@@ -1039,33 +1111,35 @@ def plot2DNLL(xvar="RF",yvar="RV",xtitle="#mu_{ggH+ttH}",ytitle="#mu_{qqH+VH}"):
         th2.GetYaxis().SetRangeUser(ymin,ymax)
     
     ############## Simple spike killer ##########
-    print " Begin Spike killer"
-    prevBin=-999
-    for j in range (0,th2.GetNbinsY()):
-      for i in range (0,th2.GetNbinsX()):
-        if (prevBin < 0) : prevBin = th2.GetBinContent(i,j) 
-        if (prevBin==0) : prevBin=1
-        thisBin = th2.GetBinContent(i,j)
-        fracChange= abs(prevBin - thisBin)/prevBin
-        if  fracChange > 10 and i!=0 and j!=0:
-          newContent = 0.5 * (th2.GetBinContent(i-1,j)+ th2.GetBinContent(i+1,j))
-          th2.SetBinContent(i,j,newContent)
-          factor=newContent/th2.GetBinContent(i,j) 
-          th2.SetBinContent(i,j,newContent*factor)
-        else:
-          print "is this else useful?"
-        prevBin= th2.GetBinContent(i,j)
+#    print " Begin Spike killer"
+#    prevBin=-999
+#    for j in range (0,th2.GetNbinsY()):
+#      for i in range (0,th2.GetNbinsX()):
+#        if (prevBin < 0) : prevBin = th2.GetBinContent(i,j) 
+#        if (prevBin==0) : prevBin=1
+#        thisBin = th2.GetBinContent(i,j)
+#        fracChange= abs(prevBin - thisBin)/prevBin
+#        if  fracChange > 10 and i!=0 and j!=0:
+#          newContent = 0.5 * (th2.GetBinContent(i-1,j)+ th2.GetBinContent(i+1,j))
+#          th2.SetBinContent(i,j,newContent)
+#          factor=newContent/th2.GetBinContent(i,j) 
+#          th2.SetBinContent(i,j,newContent*factor)
+#        else:
+#          print "is this else useful?"
+#        prevBin= th2.GetBinContent(i,j)
     ############## Simple spike killer ##########
 
     gBF = r.TGraph()
-    gSM = r.TGraph()
+    gSM = getXSgraph()
     xBF =-99999;
     yBF =-99999;
     contourPointsX= []
     contourPointsY= []
     contourPointsZ= []
     if (options.method=="rvrf") :gSM.SetPoint(0,1,1)
-    if (options.method=="mumh") :gSM.SetPoint(0,1,125.09)
+    if (options.method=="mumh") :
+ #     gSM.SetPoint(0,125.09,73.81)
+      th2.Rebin2D(1,1)
     printedOK = False
     if options.bf2d:
       if float(options.bf2d.split(',')[0]) > th2.GetXaxis().GetXmin() and \
@@ -1075,26 +1149,31 @@ def plot2DNLL(xvar="RF",yvar="RV",xtitle="#mu_{ggH+ttH}",ytitle="#mu_{qqH+VH}"):
 
       gBF.SetPoint(0,float(options.bf2d.split(',')[0]),float(options.bf2d.split(',')[1]))
     else: 
+     xFormula = r.TTreeFormula('x',xvar,tree) 
+     yFormula = r.TTreeFormula('y',yvar,tree)
+     SMFormula = r.TTreeFormula('SM','fxs_InsideAcceptance_13TeV*fbr_13TeV*0.59*1000', tree)
      for ev in range(tree.GetEntries()):
       tree.GetEntry(ev)
       if tree.deltaNLL<0: continue
       #if abs(tree.deltaNLL -2.3*0.5) <0.1 : 
       if abs(tree.deltaNLL -1*0.5) <0.05 : 
-        contourPointsX.append(getattr(tree,xvar))
-        contourPointsY.append(getattr(tree,yvar))
+        contourPointsX.append(xFormula.EvalInstance())
+        contourPointsY.append(yFormula.EvalInstance())
         contourPointsZ.append((tree.deltaNLL))
+#      gSM.SetPoint(gSM.GetN(),  xFormula.EvalInstance(), SMFormula.EvalInstance())
       if tree.deltaNLL==0:
         if not printedOK : 
-          print "Best Fit (%s) : "%(options.names[fi]),xvar,"=%.4f"%getattr(tree,xvar),", ",yvar,"=%.4f"%getattr(tree,yvar)
+          print "Best Fit (%s) : "%(options.names[fi]),xvar,"=%.4f"%xFormula.EvalInstance(),", ",yvar,"=%.4f"%yFormula.EvalInstance()
           printedOK=True
-        if float(getattr(tree,xvar)) > th2.GetXaxis().GetXmin() and \
-          float(getattr(tree,xvar)) < th2.GetXaxis().GetXmax() and \
-    float(getattr(tree,yvar)) > th2.GetYaxis().GetXmin() and \
-    float(getattr(tree,yvar)) < th2.GetYaxis().GetXmax() : addBFtoLeg = True
-        gBF.SetPoint(0,getattr(tree,xvar),getattr(tree,yvar))
-        xBF=getattr(tree,xvar)
-        yBF=getattr(tree,yvar)
-
+        if (float(xFormula.EvalInstance()) > th2.GetXaxis().GetXmin() and 
+              float(xFormula.EvalInstance()) < th2.GetXaxis().GetXmax() and 
+              float(yFormula.EvalInstance()) > th2.GetYaxis().GetXmin() and 
+              float(yFormula.EvalInstance()) < th2.GetYaxis().GetXmax()) : addBFtoLeg = True
+        gBF.SetPoint(0,xFormula.EvalInstance(),yFormula.EvalInstance())
+        xBF=xFormula.EvalInstance()
+        yBF=yFormula.EvalInstance()
+     gSM.Sort()
+#     gSM.Print()
     ############## Get BF with uncertainties ##########
     xPlus =[-999.,-999.,-999.]
     xMinus =[-999.,-999.,-999.]
@@ -1121,6 +1200,7 @@ def plot2DNLL(xvar="RF",yvar="RV",xtitle="#mu_{ggH+ttH}",ytitle="#mu_{qqH+VH}"):
           minDeltaYminus = abs(deltaY)
           xMinus= [contourPointsX[i] , contourPointsY[i],contourPointsZ[i]]
           
+
     print "BF xBF= ", xBF , " yBF=",   yBF    
     print "xPlus at ", xPlus
     print "xMinus at ", xMinus
@@ -1153,15 +1233,63 @@ def plot2DNLL(xvar="RF",yvar="RV",xtitle="#mu_{ggH+ttH}",ytitle="#mu_{qqH+VH}"):
     if options.xaxis: th2.GetXaxis().SetRangeUser(float(options.xaxis[0]),float(options.xaxis[1]))
     if options.yaxis: th2.GetYaxis().SetRangeUser(float(options.yaxis.split(',')[0]),float(options.yaxis.split(',')[1]))
 
+    BFx=[]
+    BFy=[]
+    for ibin in range(th2.GetNbinsX()):
+      temp =th2.ProjectionY("temp_"+str(ibin+1), ibin+1, ibin+1)
+      BFx.append(th2.GetXaxis().GetBinCenter(ibin+1))
+      BFy.append(    temp.GetBinCenter(temp.GetMinimumBin()))
+
+    if options.scanfromtxt:
+      BFx=[]
+      BFy=[]
+      BFyup=[]
+      BFydown=[]
+      filescan = open(options.scanfromtxt)
+      scanlines = filescan.readlines()
+      print scanlines
+      for line in scanlines:
+        BFx.append(float(line.split(":")[0]))
+        BFy.append(float(line.split(":")[1].split(",")[0].strip(" ")))
+        BFyup.append(float(line.split(":")[1].split(",")[0].strip(" ")) + float(line.split(":")[1].split(",")[1].strip(" ")))
+        BFydown.append(float(line.split(":")[1].split(",")[0].strip(" ")) + float(line.split(":")[1].split(",")[2].strip(" ")))
+
+      
+    cont_BF = TGraph(len(BFx), numpy.asarray(BFx), numpy.asarray(BFy))  
+    cont_BF.SetLineColor((options.colors[fi]))
+    cont_BF.SetLineWidth(2)
+    cont_BF.SetLineStyle(6)
+#    cont_BF.SetMarkerStyle(6)
+#    cont_BF.Print()
+    
+#    yvar = yvar+str('*(1.10)')
+#    tree.Print()
+    tree.Draw("2.*deltaNLL:%s*1.08:%s>>hscale%d%s%s(%d,%1.4f,%1.4f,%d,%1.4f,%1.4f)"%(yvar,xvar,fi,yvar,xvar,xbins,xmin,xmax,ybins,ymin,ymax),"deltaNLL>0.","prof")
+    th2sc = r.gROOT.FindObject('hscale%d%s%s'%(fi,yvar,xvar))
     cont_1sig = th2.Clone('cont_1_sig')
     cont_1sig.SetContour(2)
-    cont_1sig.SetContourLevel(1,2.3)
+    ##for 2D
+###    cont_1sig.SetContourLevel(1,2.3)
+    ##for 1D
+    cont_1sig.SetContourLevel(1,1.0)
+    if options.scanfromtxt:
+      cont_BFup = TGraph(len(BFx), numpy.asarray(BFx), numpy.asarray(BFyup))  
+      cont_BFdown = TGraph(len(BFx), numpy.asarray(BFx), numpy.asarray(BFydown))  
+    
+
     cont_1sig.SetLineColor((options.colors[fi]))
     cont_1sig.SetLineWidth(3)
     cont_1sig.SetLineStyle(1)
+#    cont_1sig.SetFillColor(r.kAzure+8)
+#    cont_1sig.SetFillStyle(3018)
     cont_2sig = th2.Clone('cont_2_sig')
     cont_2sig.SetContour(2)
+
+    #for 2D
     cont_2sig.SetContourLevel(1,6.18)
+    #for 1D
+###    cont_2sig.SetContourLevel(1,4.0)
+
     cont_2sig.SetLineColor((options.colors[fi]))
     cont_2sig.SetLineWidth(3)
     cont_2sig.SetLineStyle(2)
@@ -1176,32 +1304,27 @@ def plot2DNLL(xvar="RF",yvar="RV",xtitle="#mu_{ggH+ttH}",ytitle="#mu_{qqH+VH}"):
     gBF.SetMarkerColor((options.colors[fi]))
     gBF.SetLineColor((options.colors[fi]))
     
-    gSM.SetMarkerStyle(33)
-    gSM.SetMarkerSize(2.0)
-    gSM.SetMarkerColor((r.kRed))
-    gSM.SetLineColor((1))
+    #gSM.SetMarkerStyle(33)
+    #gSM.SetMarkerSize(2.0)
+    #gSM.SetMarkerColor((r.kRed))
+    gSM.SetLineColor((r.kRed))
+    gSM.SetLineWidth((3))
+    gSM.SetLineStyle((8))
+
+    gSM.SetFillColor(r.kRed)
+    gSM.SetFillStyle(3017)
 
     COLgrs.append(th2.Clone())
-    BFgrs.append(gBF.Clone())
+    BFgrs.append(cont_BF.Clone())
+    
+    CONTBF.append(cont_BF.Clone())
+    
     CONT1grs.append(cont_1sig.Clone())
     CONT2grs.append(cont_2sig.Clone())
 
     r.gStyle.SetOptStat(0)
 
-    if len(options.files)==1 :
-       #if options.expected : leg.AddEntry(0,"Expected SM Higgs","") 
-        if options.expected : leg.SetHeader("Expected SM H") 
-        if addBFtoLeg: leg.AddEntry(gBF,"Best Fit","P")
-        if (options.method=="rvrf") :leg.AddEntry(gSM,"SM","P")
-        if (options.method=="mumh") :leg.AddEntry(gSM,"#mu=1, m_H=125.09 GeV","P")
-        leg.AddEntry(cont_1sig,"1#sigma","L")
-        leg.AddEntry(cont_2sig,"2#sigma","L")
-    else :
-      leg.AddEntry(BFgrs[-1],options.names[fi],"P")
 
-  if options.addSM: 
-      # leg.AddEntry(smgraph,"SM","P")
-      smentry =  leg.AddEntry(smmarker_leg,"SM","P")
 
   # Now Draw them 
   print COLgrs
@@ -1219,14 +1342,16 @@ def plot2DNLL(xvar="RF",yvar="RV",xtitle="#mu_{ggH+ttH}",ytitle="#mu_{qqH+VH}"):
      gSM_underlay.SetMarkerColor(r.kWhite)
      gSM_underlay.SetMarkerSize(2.6)
      gSM_underlay.Draw("Psame")
-     gSM.Draw("Psame")
+     gSM.Draw("LE3same")
      cont_1sig.SetLineColor(1);
+#     print "HERE WE print 1d contour"
+#     cont_1sig.Print("all")
      cont_2sig.SetLineColor(1);
-     cont_1sig.Draw("cont3same9")
-     cont_2sig.Draw("cont3same9")
+     cont_1sig.Draw("colzsame")
+#     cont_2sig.Draw("cont3same9")
     if options.addSM:
       smmarker.Draw()
-    leg.Draw()
+ #   leg.Draw()
     
     drawGlobals(canv)
     canv.RedrawAxis()
@@ -1240,19 +1365,55 @@ def plot2DNLL(xvar="RF",yvar="RV",xtitle="#mu_{ggH+ttH}",ytitle="#mu_{qqH+VH}"):
     canv.Print('%s_col.C'%options.outname)
     canv.SetName('%s_col'%options.outname)
 
+
+
   # Now the main one
   #canv.Clear()
   for fi in range(len(options.files)):
     th2 = COLgrs[fi]
     gBF = BFgrs[fi]
     cont_1sig = CONT1grs[fi]
+#    print "HERE WE print 1d contour"
+#    cont_1sig.Print("all")
     cont_2sig = CONT2grs[fi]
+    cont_BF   = CONTBF[fi]
     r.gStyle.SetOptStat(0)
+    th2.GetXaxis().SetLabelOffset(0.02)
+    th2.GetXaxis().SetTitleOffset(1.02)
     if fi==0: th2.Draw("axis")
-    gBF.Draw("Psame")
-    gSM.Draw("Psame")
+    gBF.Draw("cont3same9")
+    gSM.SetFillColor(r.kRed)
+    gSM.SetFillStyle(3354)
+#    r.gStyle.SetHatchesLineWidth(2)
+    r.gStyle.SetHatchesSpacing(0.8)
+    gSM.Draw("E3Lsame")
+#    if options.scanfromtxt:
+#      cont_BFup   .Draw("l")
+#      cont_BFdown .Draw("l")
+#      cont_BFup   .Print()
+#      cont_BFdown .Print()
+#    else:
     cont_1sig.Draw("cont3same9")
-    cont_2sig.Draw("cont3same9")
+#    cont_2sig.Draw("cont3same9")
+    cont_BF.Draw("LSame")
+  #  leg.AddEntry(cont_BF,"Best Fit","L")
+
+  if len(options.files)==1 :
+       #if options.expected : leg.AddEntry(0,"Expected SM Higgs","") 
+    if options.expected : leg.SetHeader("Expected SM H") 
+    if addBFtoLeg: leg.AddEntry(cont_BF,"Data","L")
+    leg.AddEntry(cont_1sig,"1#sigma","lf")
+    if (options.method=="rvrf") :leg.AddEntry(gSM,"SM","P")
+    if (options.method=="mumh") :leg.AddEntry(gSM,"#sigma^{SM}_{fid}","lf")
+    if (options.method=="mumh") :leg.AddEntry(None,"-norm. LHC Higgs XSWG YR4","")
+    if (options.method=="mumh") :leg.AddEntry(None,"-acc. #scale[0.7]{A}#scale[0.8]{MC@NLO}","")
+ #       leg.AddEntry(cont_2sig,"2#sigma","L")
+  else :
+      leg.AddEntry(BFgrs[-1],options.names[fi],"P")
+
+  if options.addSM: 
+      # leg.AddEntry(smgraph,"SM","P")
+      smentry =  leg.AddEntry(smmarker_leg,"SM","P")
 
   leg.Draw()
 
@@ -1521,7 +1682,7 @@ def plotMPdfChComp():
   lat2.SetNDC()
   lat2.SetTextAlign(12)
   lat2.SetTextSize(0.035)
-  lat2.DrawLatex(0.57,0.59,"#hat{#mu} = %6.2f ^{#font[122]{+}%4.2f}_{#font[122]{-}%4.2f}"%(bestFit[1],bestFit[2],bestFit[3]))
+  lat2.DrawLatex(0.57,0.59,"#hat{#mu} = %6.1f ^{#font[122]{+}%4.1f}_{#font[122]{-}%4.1f}"%(bestFit[1],bestFit[2],bestFit[3]))
   lat2.DrawLatex(0.57,0.50,"m_{H} = 125.09 GeV")
 
   for gr in range(options.groups):
@@ -1746,7 +1907,7 @@ def run():
       plot1DNLL(False,options.xvar[0])
   elif options.method=='mumh':
     #plot2DNLL("MH","r","m_{H} (GeV)","#sigma/#sigma_{SM}")
-    plot2DNLL("MH","r","m_{H} (GeV)","#mu")
+    plot2DNLL("mh",options.muExpr,"m_{H} (GeV)" if options.xlab =="" else options.xlab,"#mu" if options.ylab =="" else options.ylab)
   elif options.method=='rvrf':
     plot2DNLL("RF","RV","#mu_{ggH,ttH}","#mu_{VBF,VH}")
   elif options.method=='cvcf':
