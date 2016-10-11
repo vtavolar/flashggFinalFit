@@ -40,9 +40,10 @@ template<class ResultT, class SourceT, class PredicateT> typename ResultT::itera
 	return dst.begin()+orig_size;
 }
 
-FinalModelConstruction::FinalModelConstruction(RooRealVar *massVar, RooRealVar *MHvar, RooRealVar *intL, int mhLow, int mhHigh, string proc, string cat, bool doSecMods, string systematicsFileName, vector<int> skipMasses, int verbosity,std::vector<std::string> procList, std::vector<std::string> flashggCats , string outDir, bool isProblemCategory ,bool isCB, int sqrts, bool quadraticSigmaSum)	:
+FinalModelConstruction::FinalModelConstruction(RooRealVar *massVar, RooRealVar *MHvar,  RooRealVar *MHrefvar,RooRealVar *intL, int mhLow, int mhHigh, string proc, string cat, bool doSecMods, string systematicsFileName, vector<int> skipMasses, int verbosity,std::vector<std::string> procList, std::vector<std::string> flashggCats , string outDir, bool isProblemCategory ,bool isCB, int sqrts, bool quadraticSigmaSum)	:
   mass(massVar),
   MH(MHvar),
+  MHref(MHrefvar),
   intLumi(intL),
   mhLow_(mhLow),
   mhHigh_(mhHigh),
@@ -78,12 +79,12 @@ FinalModelConstruction::FinalModelConstruction(RooRealVar *massVar, RooRealVar *
 	exit(1);
 	}
   TGraph *brGraph = norm->GetBrGraph();
-	brSpline = graphToSpline(Form("fbr_%dTeV",sqrts_),brGraph);
+  brSpline = graphToSpline(Form("fbr_%dTeV",sqrts_),brGraph,MHref);
 
  // string procs[8] = {"ggh","vbf","wzh","wh","zh","tth","gg_grav","qq_grav"} ;//Don't want this hard-coded.
   for (unsigned int i=0; i<procs_.size(); i++){
     TGraph *xsGraph = norm->GetSigmaGraph(procs_[i].c_str());
-    RooSpline1D *xsSpline = graphToSpline(Form("fxs_%s_%dTeV",procs_[i].c_str(),sqrts_),xsGraph);
+    RooSpline1D *xsSpline = graphToSpline(Form("fxs_%s_%dTeV",procs_[i].c_str(),sqrts_),xsGraph,MHref);
     xsSplines.insert(pair<string,RooSpline1D*>(procs_[i],xsSpline));
   }
   
