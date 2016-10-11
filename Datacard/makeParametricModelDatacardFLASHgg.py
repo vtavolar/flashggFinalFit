@@ -91,6 +91,8 @@ parser.add_option("--simplePdfWeights",default=False,action="store_true",help="C
 parser.add_option("--scaleFactors",help="Scale factor for spin model pass as e.g. gg_grav:1.351,qq_grav:1.027")
 parser.add_option("--quadInterpolate",type="int",default=0,help="Do a quadratic interpolation of flashgg templates back to 1 sigma from this sigma. 0 means off (default: %default)")
 parser.add_option("--mass",type="int",default=125,help="Mass at which to calculate the systematic variations (default: %default)")
+parser.add_option("--ext",type="string",default="mva",help="file extension")
+parser.add_option("--intLumi",type="float",default=-1.,help="lumi")
 (options,args)=parser.parse_args()
 allSystList=[]
 if options.submitSelf :
@@ -204,7 +206,7 @@ print options.infilename
 inWS = WSTFileWrapper(options.infilename,"tagsDumper/cms_hgg_%sTeV"%sqrts)
 #inWS = inFile.Get('wsig_13TeV')
 #if (inWS==None) : inWS = inFile.Get('tagsDumper/cms_hgg_%sTeV'%sqrts)
-intL = inWS.var('IntLumi').getVal() #FIXME
+intL = inWS.var('IntLumi').getVal() if options.intLumi <=0 else options.intLumi*1000.
 #intL = 2690
 #sqrts = inWS.var('IntLumi').getVal() #FIXME
 print "[INFO] Get Intlumi from file, value : ", intL," pb^{-1}", " sqrts ", sqrts
@@ -213,7 +215,7 @@ print "[INFO] Get Intlumi from file, value : ", intL," pb^{-1}", " sqrts ", sqrt
 ###############################################################################
 ## SHAPE SYSTEMATIC SETUP  ####################################################
 ###############################################################################
-file_ext = 'mva'
+file_ext = options.ext
 dataFile = 'CMS-HGG_%s_%dTeV_multipdf.root'%(file_ext,sqrts)
 bkgFile = 'CMS-HGG_%s_%dTeV_multipdf.root'%(file_ext,sqrts)
 dataWS = 'multipdf'
