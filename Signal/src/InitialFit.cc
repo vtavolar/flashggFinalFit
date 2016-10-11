@@ -2,6 +2,7 @@
 
 #include "TCanvas.h"
 #include "TMath.h"
+#include "TMath.h"
 #include "RooPlot.h"
 #include "RooFormulaVar.h"
 #include "RooMsgService.h"
