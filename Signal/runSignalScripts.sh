@@ -18,7 +18,12 @@ BATCH=""
 DEFAULTQUEUE=""
 BS=""
 MHREF=""
-
+REFPROC=""
+REFPROCDIFF=""
+REFTAGDIFF=""
+REFTAGWV=""
+KEEPCURRENTFITS=0
+NOSYSTS=0
 usage(){
 	echo "The script runs three signal scripts in this order:"
 		echo "signalFTest --> determines number of gaussians to use for fits of each Tag/Process"
@@ -37,6 +42,13 @@ usage(){
 		echo "--intLumi) specified in fb^-{1} (default $INTLUMI)) "
 		echo "--batch) which batch system to use (None (''),LSF,IC) (default '$BATCH')) "
 		echo "--MHref)  reference mh for xsec ) "
+		echo "--keepCurrentFits)  keep existing results from fit jobs, if there ) "
+		echo "--noSysts)  no systematics included in signal model) "
+		echo "--shiftOffDiag)  shift scale in off-diag elements of diff analysis) "
+		echo "--refProc)  ref replacement process)"                    
+		echo "--refProcDiff)  ref replacement process for differentials)"
+		echo "--refTagDiff)  ref replacement tag for differentials)"  
+		echo "--refTagWV)  ref replacement tag for WV)"      
 }
 
 
@@ -44,7 +56,7 @@ usage(){
 
 
 # options may be followed by one colon to indicate they have a required argument
-if ! options=$(getopt -u -o hi:p:f: -l help,inputFile:,procs:,bs:,smears:,scales:,scalesCorr:,scalesGlobal:,flashggCats:,ext:,fTestOnly,calcPhoSystOnly,sigFitOnly,sigPlotsOnly,intLumi:,batch:,MHref: -- "$@")
+if ! options=$(getopt -u -o hi:p:f: -l help,inputFile:,procs:,bs:,smears:,scales:,scalesCorr:,scalesGlobal:,flashggCats:,ext:,fTestOnly,calcPhoSystOnly,sigFitOnly,sigPlotsOnly,intLumi:,batch:,MHref:,keepCurrentFits,noSysts,shiftOffDiag,refProc:,refProcDiff:,refTagDiff:,refTagWV: -- "$@")
 then
 # something went wrong, getopt will put out an error message for us
 exit 1
@@ -67,10 +79,17 @@ case $1 in
 --fTestOnly) FTESTONLY=1; echo "ftest" ;;
 --calcPhoSystOnly) CALCPHOSYSTONLY=1;;
 --sigFitOnly) SIGFITONLY=1;;
+--keepCurrentFits) KEEPCURRENTFITS=1;;
+--noSysts) NOSYSTS=1;;
+--shiftOffDiag) SHIFTOFFDIAG=1;;
 --sigPlotsOnly) SIGPLOTSONLY=1;;
 --intLumi) INTLUMI=$2; shift ;;
 --batch) BATCH=$2; shift;;
 --MHref) MHREF=$2; shift;;
+--refProc) REFPROC=$2; shift;;
+--refProcDiff) REFPROCDIFF=$2; shift;;
+--refTagDiff) REFTAGDIFF=$2; shift;;
+--refTagWV) REFTAGWV=$2; shift;;
 
 (--) shift; break;;
 (-*) usage; echo "$0: error - unrecognized option $1" 1>&2; usage >> /dev/stderr; exit 1;;
@@ -141,6 +160,7 @@ else
        ./python/submitSignaFTest.py --procs $PROCS --flashggCats $CATS --outDir $OUTDIR --i $FILE --batch $BATCH -q $DEFAULTQUEUE
 
       PEND=`ls -l $OUTDIR/fTestJobs/sub*| grep -v "\.run" | grep -v "\.done" | grep -v "\.fail" | grep -v "\.err" |grep -v "\.log"  |wc -l`
+      TOTAL=`ls -l $OUTDIR/fTestJobs/sub*| grep "\.sh"  |wc -l`
       echo "PEND $PEND"
       while (( $PEND > 0 )) ; do
         PEND=`ls -l $OUTDIR/fTestJobs/sub* | grep -v "\.run" | grep -v "\.done" | grep -v "\.fail" | grep -v "\.err" | grep -v "\.log" |wc -l`
@@ -150,6 +170,7 @@ else
         (( PEND=$PEND-$RUN-$FAIL-$DONE ))
         echo " PEND $PEND - RUN $RUN - DONE $DONE - FAIL $FAIL"
         if (( $RUN > 0 )) ; then PEND=1 ; fi
+	if (( $DONE == $TOTAL )) ; then PEND=0; fi
         if (( $FAIL > 0 )) ; then 
           echo "ERROR at least one job failed :"
           ls -l $OUTDIR/fTestJobs/sub* | grep "\.fail"
@@ -195,38 +216,83 @@ fi
 ####################### SIGFIT #####################
 ####################################################
 if [ $SIGFITONLY == 1 ]; then
-
-  echo "=============================="
-  echo "Running SignalFit"
-  echo "-->Create actual signal model"
-  echo "=============================="
-
-
-  if [[ $BATCH == "" ]]; then
-    echo "./bin/SignalFit -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 -s dat/photonCatSyst_$EXT.dat --procs $PROCS -o $OUTDIR/CMS-HGG_mva_13TeV_sigfit.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI $MHREFOPT"
-    ./bin/SignalFit -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 -s dat/photonCatSyst_$EXT.dat --procs $PROCS -o $OUTDIR/CMS-HGG_mva_13TeV_sigfit.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI $MHREFOPT #--pdfWeights 26 
+  DONE=`ls -l $OUTDIR/sigfit/SignalFitJobs/sub* | grep "\.done" |wc -l`
+  LOGS=`ls -l $OUTDIR/sigfit/SignalFitJobs/sub* | grep "\.log" |wc -l`
+  ERRS=`ls -l $OUTDIR/sigfit/SignalFitJobs/sub* | grep "\.errs" |wc -l`
+  if [ $DONE == $LOGS -a $LOGS == $ERRS -a $KEEPCURRENTFITS == 1]; then
+      $KEEPCURRENTFITS == 1
   else
-    echo " ./python/submitSignalFit.py -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 -s dat/photonCatSyst_$EXT.dat --procs $PROCS -o $OUTDIR/CMS-HGG_sigfit_$EXT.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI --batch $BATCH -q $DEFAULTQUEUE $BSOPT "
-    ./python/submitSignalFit.py -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 -s dat/photonCatSyst_$EXT.dat --procs $PROCS -o $OUTDIR/CMS-HGG_sigfit_$EXT.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI --batch $BATCH -q $DEFAULTQUEUE $BSOPT $MHREFOPT
-
-    PEND=`ls -l $OUTDIR/sigfit/SignalFitJobs/sub*| grep -v "\.run" | grep -v "\.done" | grep -v "\.fail" | grep -v "\.err" |grep -v "\.log"  |wc -l`
-    echo "PEND $PEND"
-    while (( $PEND > 0 )) ;do
-      PEND=`ls -l $OUTDIR/sigfit/SignalFitJobs/sub* | grep -v "\.run" | grep -v "\.done" | grep -v "\.fail" | grep -v "\.err" | grep -v "\.log" |wc -l`
-      RUN=`ls -l $OUTDIR/sigfit/SignalFitJobs/sub* | grep "\.run" |wc -l`
-      FAIL=`ls -l $OUTDIR/sigfit/SignalFitJobs/sub* | grep "\.fail" |wc -l`
-      DONE=`ls -l $OUTDIR/sigfit/SignalFitJobs/sub* | grep "\.done" |wc -l`
-      (( PEND=$PEND-$RUN-$FAIL-$DONE ))
-      echo " PEND $PEND - RUN $RUN - DONE $DONE - FAIL $FAIL"
-      if (( $RUN > 0 )) ; then PEND=1 ; fi
-      if (( $FAIL > 0 )) ; then 
-        echo "ERROR at least one job failed :"
-        ls -l $OUTDIR/sigfit/SignalFitJobs/sub* | grep "\.fail"
-        exit 1
-      fi
-      sleep 10
+      $KEEPCURRENTFITS == 0
+  fi
+  if [ $KEEPCURRENTFITS == 0 ]; then  
+    echo "=============================="
+    echo "Running SignalFit"
+    echo "-->Create actual signal model"
+    echo "=============================="
   
-    done
+#    SIGFITOPTS=''
+#    if [ $SHIFTOFFDIAG == 1 ]; then
+#	SIGFITOPTS= "${SIGFITOPTS} --shiftOffDiag"
+#    fi
+    
+    echo "shiftOffDiag is $SHIFTOFFDIAG"
+    SIGFITOPTS=""
+    if [ $SHIFTOFFDIAG == 1 ]; then
+	SIGFITOPTS="${SIGFITOPTS} --shiftOffDiag 1"
+    fi
+    if [[ $REFPROC ]]; then
+	SIGFITOPTS="${SIGFITOPTS} --refProc $REFPROC"
+    fi
+    if [[ $REFPROCDIFF ]]; then
+	SIGFITOPTS="${SIGFITOPTS} --refProcDiff $REFPROCDIFF"
+    fi
+    if [[ $REFTAGDIFF ]]; then
+	SIGFITOPTS="${SIGFITOPTS} --refTagDiff $REFTAGDIFF"
+    fi
+    if [[ $REFTAGWV ]]; then
+	SIGFITOPTS="${SIGFITOPTS} --refTagWV $REFTAGWV"
+    fi
+    
+    echo "runsigopt is $SIGFITOPTS"
+
+
+
+    if [[ $BATCH == "" ]]; then
+	if [[ $NOSYSTS == 0 ]]; then
+	    echo "./bin/SignalFit -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 -s dat/photonCatSyst_$EXT.dat --procs $PROCS -o $OUTDIR/CMS-HGG_mva_13TeV_sigfit.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI $MHREFOPT $SIGFITOPTS"
+	    ./bin/SignalFit -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 -s dat/photonCatSyst_$EXT.dat --procs $PROCS -o $OUTDIR/CMS-HGG_mva_13TeV_sigfit.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI $MHREFOPT $SIGFITOPTS#--pdfWeights 26 
+	else
+	    echo "./bin/SignalFit -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130  --procs $PROCS -o $OUTDIR/CMS-HGG_mva_13TeV_sigfit.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI $MHREFOPT $SIGFITOPTS"
+	    ./bin/SignalFit -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130  --procs $PROCS -o $OUTDIR/CMS-HGG_mva_13TeV_sigfit.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI $MHREFOPT $SIGFITOPTS #--pdfWeights 26
+	fi
+    else
+	if [[ $NOSYSTS == 0 ]]; then
+	    echo " ./python/submitSignalFit.py -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 -s dat/photonCatSyst_$EXT.dat --procs $PROCS -o $OUTDIR/CMS-HGG_sigfit_$EXT.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI --batch $BATCH -q $DEFAULTQUEUE $BSOPT $SIGFITOPTS "
+	    ./python/submitSignalFit.py -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 -s dat/photonCatSyst_$EXT.dat --procs $PROCS -o $OUTDIR/CMS-HGG_sigfit_$EXT.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI --batch $BATCH -q $DEFAULTQUEUE $BSOPT $MHREFOPT $SIGFITOPTS
+	else
+	    echo " ./python/submitSignalFit.py -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130  --procs $PROCS -o $OUTDIR/CMS-HGG_sigfit_$EXT.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI --batch $BATCH -q $DEFAULTQUEUE $BSOPT $SIGFITOPTS"
+	    ./python/submitSignalFit.py -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130  --procs $PROCS -o $OUTDIR/CMS-HGG_sigfit_$EXT.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI --batch $BATCH -q $DEFAULTQUEUE $BSOPT $MHREFOPT $SIGFITOPTS
+	fi
+  
+      PEND=`ls -l $OUTDIR/sigfit/SignalFitJobs/sub*| grep -v "\.run" | grep -v "\.done" | grep -v "\.fail" | grep -v "\.err" |grep -v "\.log"  |wc -l`
+      echo "PEND $PEND"
+      while (( $PEND > 0 )) ;do
+        PEND=`ls -l $OUTDIR/sigfit/SignalFitJobs/sub* | grep -v "\.run" | grep -v "\.done" | grep -v "\.fail" | grep -v "\.err" | grep -v "\.log" |wc -l`
+        RUN=`ls -l $OUTDIR/sigfit/SignalFitJobs/sub* | grep "\.run" |wc -l`
+        FAIL=`ls -l $OUTDIR/sigfit/SignalFitJobs/sub* | grep "\.fail" |wc -l`
+        DONE=`ls -l $OUTDIR/sigfit/SignalFitJobs/sub* | grep "\.done" |wc -l`
+        (( PEND=$PEND-$RUN-$FAIL-$DONE ))
+        echo " PEND $PEND - RUN $RUN - DONE $DONE - FAIL $FAIL"
+        if (( $RUN > 0 )) ; then PEND=1 ; fi
+        if (( $FAIL > 0 )) ; then 
+          echo "ERROR at least one job failed :"
+          ls -l $OUTDIR/sigfit/SignalFitJobs/sub* | grep "\.fail"
+          exit 1
+        fi
+        sleep 10
+    
+      done
+    fi
 
     ls $PWD/$OUTDIR/CMS-HGG_sigfit_${EXT}_*.root > out.txt
     echo "ls ../Signal/$OUTDIR/CMS-HGG_sigfit_${EXT}_*.root > out.txt"
