@@ -606,7 +606,7 @@ vector<string> flashggCats_;
   RooWorkspace *inWS;
 	if(isFlashgg_){
 		if (isData_){
-			inWS = (RooWorkspace*)inFile->Get("tagsDumper/cms_hgg_13TeV");
+			inWS = (RooWorkspace*)inFile->Get("cms_hgg_13TeV");
 		} else {
 			inWS = (RooWorkspace*)inFile->Get("cms_hgg_workspace");
 		}
@@ -681,7 +681,9 @@ vector<string> flashggCats_;
 		}
 		RooDataSet *dataFull;
 		if (isData_) {
-    dataFull = (RooDataSet*)inWS->data(Form("Data_13TeV_%s",catname.c_str()));
+		  std::cout<<Form("Data_13TeV_%s",catname.c_str())<<std::endl;
+		  dataFull = (RooDataSet*)inWS->data(Form("Data_13TeV_%s",catname.c_str()));
+		  dataFull->Print();
 		if (verbose) std::cout << "[INFO] opened data for  "  << Form("Data_%s",catname.c_str()) <<" - " << dataFull <<std::endl;
     }
 		else 
@@ -707,6 +709,7 @@ vector<string> flashggCats_;
 			thisdataBinned_name= Form("roohist_data_mass_cat%d",cat);
 			//RooDataSet *data = (RooDataSet*)dataFull;
 		}
+		std::cout<<"Debug: thisdataBinned_name: "<<thisdataBinned_name<<std::endl;
 		RooDataHist thisdataBinned(thisdataBinned_name.c_str(),"data",*mass,*dataFull);
 		data = (RooDataSet*)&thisdataBinned;
 
