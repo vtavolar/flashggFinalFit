@@ -36,10 +36,10 @@ done
 
 echo " \end{document}		    " >> all.tex
 
-pdflatex all.tex
-mv all.pdf $DIR.pdf
-
-rm all.tex
-rm all.aux
-rm all.log
+#pdflatex all.tex
+#mv all.pdf $DIR.pdf
+#
+#rm all.tex
+#rm all.aux
+#rm all.log
 
