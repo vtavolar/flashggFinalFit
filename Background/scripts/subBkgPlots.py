@@ -49,8 +49,16 @@ for cat in range(ncats):
   f = open('%s/sub%d.sh'%(options.outDir,cat),'w')
   f.write('#!/bin/bash\n')
   f.write('cd %s\n'%os.getcwd())
+#  if (options.batch == "T3CH"):
+  f.write('CMSSW_DIR=%s\n'%(os.environ['CMSSW_BASE']))
+  if (options.batch == "T3CH"):
+    f.write('source $VO_CMS_SW_DIR/cmsset_default.sh\n')
+    f.write('cd $CMSSW_DIR/src\n')
+  
   f.write('eval `scramv1 runtime -sh`\n')
-  execLine = '$CMSSW_BASE/src/flashggFinalFit/Background/bin/makeBkgPlots -f %s -b %s -o %s/BkgPlots_cat%d.root -d %s -c %d -l \"%s\"'%(options.flashggCats,options.bkgfilename,options.outDir,cat,options.outDir,cat,options.catLabels[cat])
+  if (options.batch == "T3CH"):
+    f.write('cd %s\n'%os.getcwd())
+  execLine = '$CMSSW_DIR/src/flashggFinalFit/Background/bin/makeBkgPlots -f %s -b %s -o %s/BkgPlots_cat%d.root -d %s -c %d -l \"%s\"'%(options.flashggCats,options.bkgfilename,options.outDir,cat,options.outDir,cat,options.catLabels[cat])
 #  execLine = '$PWD -b %s -s %s -o %s/BkgPlots_cat%d.root -d %s -c %d -l \"%s\"'%(options.bkgfilename,options.sigfilename,options.outDir,cat,options.outDir,cat,options.catLabels[cat])
   execLine += " --sqrts %d "%options.sqrts
   execLine += " --intLumi %f "%options.intLumi
@@ -86,7 +94,7 @@ for cat in range(ncats):
   
   os.system('chmod +x %s'%f.name)
   if options.dryRun:
-    if (options.batch == "IC" or options.batch == "T3CH") : print 'qsub -q %s -o %s.log %s'%(options.queue,os.path.abspath(f.name),os.path.abspath(f.name))
+    if (options.batch == "IC" or options.batch == "T3CH") : print 'qsub -l h_vmem=6g -q %s -o %s.log %s'%(options.queue,os.path.abspath(f.name),os.path.abspath(f.name))
     else: print 'bsub -q %s -o %s.log %s'%(options.queue,os.path.abspath(f.name),os.path.abspath(f.name))
 
   elif options.runLocal:
