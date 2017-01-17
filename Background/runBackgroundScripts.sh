@@ -88,6 +88,11 @@ OUTDIR="outdir_${EXT}"
 
 mkdir -p $OUTDIR
 
+echo "Options are:"
+echo "FTESTONLY = $FTESTONLY"
+echo "BKGPLOTSONLY = $BKGPLOTSONLY"
+echo "PSEUDODATAONLY = $PSEUDODATAONLY"
+
 if [ $FTESTONLY == 0 -a $PSEUDODATAONLY == 0 -a $BKGPLOTSONLY == 0 ]; then
 #IF not particular script specified, run all!
 FTESTONLY=1
@@ -112,6 +117,11 @@ fi
 ####################################################
 ################## PSEUDODATAONLY ###################
 ####################################################
+
+echo "Options are:"
+echo "FTESTONLY = $FTESTONLY"
+echo "BKGPLOTSONLY = $BKGPLOTSONLY"
+echo "PSEUDODATAONLY = $PSEUDODATAONLY"
 
 if [ $PSEUDODATAONLY == 1 ] && [ $ISDATA == 0 ]; then
 
@@ -149,7 +159,7 @@ OPT=" --isData 1"
 fi
 
 echo " ./bin/fTest -i $FILE --saveMultiPdf CMS-HGG_multipdf_$EXT.root  -D $OUTDIR/bkgfTest$DATAEXT -f $CATS $OPT"
-./bin/fTest -i $FILE --saveMultiPdf CMS-HGG_multipdf_$EXT.root  -D $OUTDIR/bkgfTest$DAf TAEXT -f $CATS $OPT
+./bin/fTest -i $FILE --saveMultiPdf CMS-HGG_multipdf_$EXT.root  -D $OUTDIR/bkgfTest$DATAEXT -f $CATS $OPT --verbose 1
 
 OPT=""
 fi
