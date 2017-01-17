@@ -85,7 +85,7 @@ void InitialFit::buildSumOfGaussians(string name, int nGaussians, bool recursive
     if (verbosity_>=1) cout << "nGaussians =  " << nGaussians << endl;
     for (int g=0; g<nGaussians; g++){
       //      RooRealVar *dm = new RooRealVar(Form("dm_mh%d_g%d",mh,g),Form("dm_mh%d_g%d",mh,g),0.1,-8.,8.);
-      RooRealVar *dm = new RooRealVar(Form("dm_mh%d_g%d",mh,g),Form("dm_mh%d_g%d",mh,g),0.1,-3.,3.);
+      RooRealVar *dm = new RooRealVar(Form("dm_mh%d_g%d",mh,g),Form("dm_mh%d_g%d",mh,g),0.1,-10.,10.);
 
 //      float dmRange =5.;
 //      if (g>3) dmRange=2.;
@@ -108,7 +108,7 @@ void InitialFit::buildSumOfGaussians(string name, int nGaussians, bool recursive
         tempFitParams.insert(pair<string,RooRealVar*>(string(frac->GetName()),frac));
         coeffs->add(*frac);
       }
-      if (g==nGaussians-1 && forceFracUnity){
+      if (!recursive && g==nGaussians-1 && forceFracUnity){
         string formula="1.";
         for (int i=0; i<nGaussians-1; i++) formula += Form("-@%d",i);
         RooAbsReal *recFrac = new RooFormulaVar(Form("frac_mh%d_g%d",mh,g),Form("frac_mh%d_g%d",mh,g),formula.c_str(),*coeffs);
@@ -116,7 +116,9 @@ void InitialFit::buildSumOfGaussians(string name, int nGaussians, bool recursive
         coeffs->add(*recFrac);
       }
     }
-    assert(gaussians->getSize()==nGaussians && coeffs->getSize()==nGaussians-(1*!forceFracUnity));
+    cout<<"gaussians->getSize() " << gaussians->getSize() <<" ,   nGaussians " << nGaussians << endl;
+    assert(gaussians->getSize()==nGaussians);
+    assert(coeffs->getSize()==nGaussians-(1*!forceFracUnity));
     RooAddPdf *tempSumOfGaussians = new RooAddPdf(Form("%s_mh%d",name.c_str(),mh),Form("%s_mh%d",name.c_str(),mh),*gaussians,*coeffs,recursive);
     sumOfGaussians.insert(pair<int,RooAddPdf*>(mh,tempSumOfGaussians));
     fitParams.insert(pair<int,map<string,RooRealVar*> >(mh,tempFitParams));
@@ -126,7 +128,7 @@ void InitialFit::buildSumOfGaussians(string name, int nGaussians, bool recursive
 }
 
 void InitialFit::loadPriorConstraints(string filename, float constraintValue){
-
+  double tempconstraintValue=constraintValue;
   ifstream datfile;
   datfile.open(filename.c_str());
   if (datfile.fail()) return;
@@ -141,9 +143,17 @@ void InitialFit::loadPriorConstraints(string filename, float constraintValue){
     assert(fitParams.find(mhS)!=fitParams.end());
     assert(fitParams[mhS].find(name)!=fitParams[mhS].end());
     fitParams[mhS][name]->setVal(val);
-    if (val>0.) fitParams[mhS][name]->setRange((1.-constraintValue)*val,(1.+constraintValue)*val);
-    else fitParams[mhS][name]->setRange((1.+constraintValue)*val,(1.-constraintValue)*val);
+    double pmin=fitParams[mhS][name]->getMin();
+    double pmax=fitParams[mhS][name]->getMax();
+    if(name.find("dm_") != string::npos){
+      constraintValue=0.5;
+    }
+    if (val>0.) fitParams[mhS][name]->setRange(std::max((1.-constraintValue)*val,pmin),
+					       std::min((1.+constraintValue)*val,pmax));
+    else fitParams[mhS][name]->setRange( std::max((1.+constraintValue)*val,pmin),
+					 std::min((1.-constraintValue)*val,pmax));
   }
+  constraintValue=tempconstraintValue;
   datfile.close();
 }
 
@@ -308,11 +318,13 @@ void InitialFit::runFits(int ncpu){
          //if (mh125_dmerr >3.0) { mh125_dmerr=3.0 ;}
          dm->setVal( mh125_dm_val );
          //dm->setRange( mh125_dm_val - n_sigma_constraint*mh125_dmerr ,  mh125_dm_val + n_sigma_constraint*mh125_dmerr);
-         float allowedRange = n_sigma_constraint*mh125_dmerr;
-         if (n_sigma_constraint*mh125_dmerr > 0.05* mh125_dm_val) {allowedRange= 0.05* mh125_dm_val;}
+         float allowedRange = 5*n_sigma_constraint*mh125_dmerr; //VRT: set it to 10 times to allow scale to float correctly
+	 //         if (n_sigma_constraint*mh125_dmerr > 0.05* mh125_dm_val) {allowedRange= 0.05* mh125_dm_val;}
 
-         dm->setRange( TMath::Max(mh125_dm_val - allowedRange,dm->getMin()) ,TMath::Min(mh125_dm_val + allowedRange,dm->getMax()));
-          std::cout <<" LC DEBUG MH " << mh << ": fit params dm for gaussian_"<< ng << " set to be 125 value " << mh125_dm_val << " + "<< mh125_dmerr << " - "<< mh125_dmerr  << std::endl;   
+	 //         dm->setRange( TMath::Max(mh125_dm_val - allowedRange,dm->getMin()) ,TMath::Min(mh125_dm_val + allowedRange,dm->getMax()));
+         dm->setRange( mh125_dm_val - allowedRange ,mh125_dm_val + allowedRange);
+	 //          std::cout <<" LC DEBUG MH " << mh << ": fit params dm for gaussian_"<< ng << " set to be 125 value " << mh125_dm_val << " + "<< mh125_dmerr << " - "<< mh125_dmerr  << std::endl;   
+          std::cout <<" LC DEBUG MH " << mh << ": fit params dm for gaussian_"<< ng << " set to be 125 value " << mh125_dm_val << " + "<< mh125_dm_val - allowedRange << " - "<< mh125_dm_val + allowedRange  << std::endl;   
          dm->Print();
         }
       else{
@@ -386,17 +398,60 @@ void InitialFit::setFitParams(std::map<int,std::map<std::string,RooRealVar*> >& 
 {
   for(map<int,map<string,RooRealVar*> >::iterator ipar = pars.begin(); ipar!=pars.end(); ++ipar ) {
     int mh = ipar->first;
-    map<string,RooRealVar*>& vars = ipar->second;
+    std::map<std::string,RooRealVar*>& vars = ipar->second;
     std::map<std::string,RooRealVar*> myParams = fitParams[mh];
     for(std::map<std::string,RooRealVar*>::iterator ivar=vars.begin(); ivar!=vars.end(); ++ivar){
-      //// std::cout << "Setting " << ivar->first << " to " << ivar->second->getVal() << " " <<
-      //// 	myParams[ivar->first]->getVal() << " " << myParams[ivar->first]->GetName() <<
-      //// 	ivar->second->GetName() << std::endl;
+      std::cout << "Setting " << ivar->first << " to " << ivar->second->getVal() << std::endl;
+       	//myParams[ivar->first]->getVal() << " " << myParams[ivar->first]->GetName() <<
+       	//ivar->second->GetName() << std::endl;
       myParams[ivar->first]->setVal(ivar->second->getVal());
+      if(ivar->first.find("dm_") != string::npos){//VRT if we are looking at a mean shift, shift it by the scale bias (needed fot off-diagonal elements of differential)
+	std::cout << "This parameter is a dm (shift from nominal  mean) " << std::endl;
+	float ds_mean = datasets[mh]->mean(*mass);
+
+	myParams[ivar->first]->setVal(ivar->second->getVal()-float(mh)+ds_mean);
+      
+      }
     }
   }
 }
 
+void InitialFit::shiftScale(){
+
+  for(map<int,map<string,RooRealVar*> >::iterator ipar = fitParams.begin(); ipar!=fitParams.end(); ++ipar ) {
+    int mh = ipar->first;
+    if(datasetsSTD[mh]->sumEntries()<=0) continue;
+    std::map<std::string,RooRealVar*> myParams = ipar->second;
+    for(std::map<std::string,RooRealVar*>::iterator ivar=myParams.begin(); ivar!=myParams.end(); ++ivar){
+//      std::cout << "Setting " << ivar->first << " to " << ivar->second->getVal() << std::endl;
+//       	//myParams[ivar->first]->getVal() << " " << myParams[ivar->first]->GetName() <<
+//       	//ivar->second->GetName() << std::endl;
+//      myParams[ivar->first]->setVal(ivar->second->getVal());
+      if(ivar->first.find("dm_") != string::npos){//VRT if we are looking at a mean shift, shift it by the scale bias (needed fot off-diagonal elements of differential)
+	std::cout << "This parameter is a dm (shift from nominal  mean) " << std::endl;
+	std::cout << "mh is " << mh << std::endl;
+	
+	//shift the scale by the bias wrt to the STANDARD dataset
+	float dsSTD_mean = datasetsSTD[mh]->mean(*mass);
+	std::cout << "datasetSTD mean is " << dsSTD_mean << std::endl;
+	float ds_mean = datasets[mh]->mean(*mass);
+	std::cout << "dataset (repl.) mean is " << ds_mean << std::endl;
+	float scaleShift =   ds_mean - dsSTD_mean;
+
+	double pmin=myParams[ivar->first]->getMin();
+	double pmax=myParams[ivar->first]->getMax();
+	std::cout << "Setting " << ivar->first << " range to (" << pmin - scaleShift << ", " << pmax - scaleShift  << ") instead of ("<<pmin << ", "<<pmax <<")" << std::endl;
+	myParams[ivar->first]->setRange( pmin - scaleShift,
+					 pmax - scaleShift);
+      	std::cout << "Setting " << ivar->first << " to " << ivar->second->getVal()-scaleShift << "instead of "<< ivar->second->getVal() << std::endl;
+	myParams[ivar->first]->setVal(ivar->second->getVal()-scaleShift);
+      }
+    }
+  }
+
+}
+
+//void InitialFit::shiftDms(){}
 
 void InitialFit::plotFits(string name, string rvwv){
 
