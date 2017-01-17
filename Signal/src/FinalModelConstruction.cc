@@ -92,7 +92,7 @@ FinalModelConstruction::FinalModelConstruction(RooRealVar *massVar, RooRealVar *
   vector<string> files;
   split( files, systematicsFileName, boost::is_any_of(",") );
   for(vector<string>::iterator fi=files.begin(); fi!=files.end(); ++fi ) {
-	  loadSignalSystematics(*fi);
+      loadSignalSystematics(*fi);
   }
   if (verbosity_) printSignalSystematics();
 }
@@ -224,7 +224,8 @@ void FinalModelConstruction::printSignalSystematics(){
 }
 
 void FinalModelConstruction::loadSignalSystematics(string filename){
-	
+  cout << filename << endl;
+  if(filename.empty()) return;
 	int diphotonCat=-1;
 	string proc;
 	ifstream datfile;
@@ -843,7 +844,9 @@ vector<RooAddPdf*> FinalModelConstruction::buildPdf(string name, int nGaussians,
     RooAbsReal *sig_fit = splines[Form("sigma_g%d",g)];
     sig_fit->SetName(Form("sigma_g%d_%s",g,ext.c_str()));
     RooAbsReal *sigma = getSigmaWithPhotonSyst(sig_fit,Form("sig_g%d_%s",g,ext.c_str()));
-		RooGaussian *gaus = new RooGaussian(Form("gaus_g%d_%s",g,ext.c_str()),Form("gaus_g%d_%s",g,ext.c_str()),*mass,*mean,*sigma);
+    std::cout<<"sigma in finalmodelconstrusction"<<std::endl;
+    sigma->Print();
+    RooGaussian *gaus = new RooGaussian(Form("gaus_g%d_%s",g,ext.c_str()),Form("gaus_g%d_%s",g,ext.c_str()),*mass,*mean,*sigma);
     dm_vect.push_back(dm);
     mean_vect.push_back(mean);
     sigma_vect.push_back(sigma);
@@ -867,7 +870,9 @@ vector<RooAddPdf*> FinalModelConstruction::buildPdf(string name, int nGaussians,
 			RooAbsReal *meanSM = getMeanWithPhotonSyst(dmSM,Form("mean_g%d_%s_SM",g,ext.c_str()),false,true);
       RooAbsReal *sig_fitSM = splines[Form("sigma_g%d_SM",g)];
       sig_fitSM->SetName(Form("sigma_g%d_%s_SM",g,ext.c_str()));
-			RooAbsReal *sigmaSM = getSigmaWithPhotonSyst(sig_fitSM,Form("sig_g%d_%s_SM",g,ext.c_str()));
+      RooAbsReal *sigmaSM = getSigmaWithPhotonSyst(sig_fitSM,Form("sig_g%d_%s_SM",g,ext.c_str()));
+      std::cout<<"sigmaSM in finalmodelconstrusction"<<std::endl;
+      sigmaSM->Print();
       RooGaussian *gausSM = new RooGaussian(Form("gaus_g%d_%s_SM",g,ext.c_str()),Form("gaus_g%d_%s_SM",g,ext.c_str()),*mass,*meanSM,*sigmaSM);
       gaussians_SM->add(*gausSM);
       // second degen higgs
@@ -876,7 +881,9 @@ vector<RooAddPdf*> FinalModelConstruction::buildPdf(string name, int nGaussians,
 			RooAbsReal *mean2 = getMeanWithPhotonSyst(dm2,Form("mean_g%d_%s_2",g,ext.c_str()),true,false);
       RooAbsReal *sig_fit2 = splines[Form("sigma_g%d_2",g)];
       sig_fit2->SetName(Form("sigma_g%d_%s_2",g,ext.c_str()));
-			RooAbsReal *sigma2 = getSigmaWithPhotonSyst(sig_fit2,Form("sig_g%d_%s_2",g,ext.c_str()));
+      RooAbsReal *sigma2 = getSigmaWithPhotonSyst(sig_fit2,Form("sig_g%d_%s_2",g,ext.c_str()));
+      std::cout<<"sigma2 in finalmodelconstrusction"<<std::endl;
+      sigma2->Print();
       RooGaussian *gaus2 = new RooGaussian(Form("gaus_g%d_%s_2",g,ext.c_str()),Form("gaus_g%d_%s_2",g,ext.c_str()),*mass,*mean2,*sigma2);
       gaussians_2->add(*gaus2);
       // natural width
