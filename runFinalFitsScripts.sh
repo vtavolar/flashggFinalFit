@@ -28,10 +28,19 @@ DATAFILE=""
 UNBLIND=0
 ISDATA=0
 BS=0
+NOSYSTS=0
+SHIFTOFFDIAG=0
 MHREF=""
+REFPROC=""
+REFPROCDIFF=""
+REFTAGDIFF=""
+REFTAGWV=""
 VERBOSE=0
 BATCH="LSF"
 DEFAULTQUEUE="1nh"
+MULTIPDF=0
+ISTOSKIP=0
+TOSKIP=""
 usage(){
     echo "The script runs background scripts:"
     echo "options:"
@@ -56,6 +65,17 @@ usage(){
     echo "--dataFile) specified in fb^-{1} (default $DATAFILE)) "
     echo "--batch) which batch system to use (LSF,IC) (default $BATCH)) "
     echo "--MHref)  reference mh for xsec ) "
+    echo "--noSysts)  no systs in signal model ) "
+    echo "--shiftOffDiag)  shift scale in off-diag elements of diff analysis ) "
+    echo "--keepCurrentFits)  keep existing results of signal fits, if there ) "
+    echo "--datacardDifferential)  automatic numbering of processes in datacard for differential analysis) "
+    echo "--multiPdf) write multipdf in datacard)"
+    echo "--isToSkip) skip procs:cats in datacard)"
+    echo "--toSkip) specify which proc:cat is to skip in datacard)"
+    echo "--refProc)  ref replacement process)"                    
+    echo "--refProcDiff)  ref replacement process for differentials)"
+    echo "--refTagDiff)  ref replacement tag for differentials)"  
+    echo "--refTagWV)  ref replacement tag for WV)"      
 }
 
 
@@ -63,7 +83,7 @@ usage(){
 
 
 # options may be followed by one colon to indicate they have a required argument
-if ! options=$(getopt -u -o hi:p:f: -l help,inputFile:,procs:,bs:,flashggCats:,ext:,smears:,scales:,pseudoDataDat:,sigFile:,combine,combineOnly,combinePlotsOnly,signalOnly,backgroundOnly,datacardOnly,superloop:,continueLoop:,intLumi:,unblind,isData,isFakeData,dataFile:,batch:,verbose,MHref: -- "$@")
+if ! options=$(getopt -u -o hi:p:f: -l help,inputFile:,procs:,bs:,flashggCats:,ext:,smears:,scales:,pseudoDataDat:,sigFile:,combine,combineOnly,combinePlotsOnly,signalOnly,backgroundOnly,datacardOnly,superloop:,continueLoop:,intLumi:,unblind,noSysts,shiftOffDiag,isData,isFakeData,dataFile:,batch:,verbose,MHref:,keepCurrentFits,datacardDifferential,multiPdf,isToSkip,toSkip:,refProc:,refProcDiff:,refTagDiff:,refTagWV: -- "$@")
 then
 # something went wrong, getopt will put out an error message for us
     exit 1
@@ -100,6 +120,17 @@ do
 	--isFakeData) ISDATA=0;; 
 	--unblind) UNBLIND=1;;
 	--MHref) MHREF=$2; shift;;
+	--noSysts) NOSYSTS=1;;
+	--shiftOffDiag) SHIFTOFFDIAG=1;;
+	--keepCurrentFits) KEEPCURRENTFITS=1;;
+	--datacardDifferential) DATACARDDIFFERENTIAL=1;;
+	--multiPdf) MULTIPDF=1;;
+	--isToSkip) ISTOSKIP=1;;
+	--toSkip) TOSKIP=$2; shift;;
+	--refProc) REFPROC=$2; shift;;
+	--refProcDiff) REFPROCDIFF=$2; shift;;
+	--refTagDiff) REFTAGDIFF=$2; shift;;
+	--refTagWV) REFTAGWV=$2; shift;;
 
 	(--) shift; break;;
 	(-*) usage; echo "$0: error - unrecognized option $1" 1>&2; usage >> /dev/stderr; exit 1;;
@@ -152,10 +183,64 @@ if [ $CONTINUELOOP == 0 ]; then
 	echo "------------------------------------------------"
 	echo "------------>> Running SIGNAL"
 	echo "------------------------------------------------"
+	
+	
+	echo "shiftOffDiag is $SHIFTOFFDIAG"
+	RUNSIGOPT=""
+	if [ $SHIFTOFFDIAG == 1 ]; then
+	    RUNSIGOPT="${RUNSIGOPT} --shiftOffDiag"
+	fi
+	if [[ $REFPROC ]]; then
+	    RUNSIGOPT="${RUNSIGOPT} --refProc $REFPROC"
+	fi
+	if [[ $REFPROCDIFF ]]; then
+	    RUNSIGOPT="${RUNSIGOPT} --refProcDiff $REFPROCDIFF"
+	fi
+	if [[ $REFTAGDIFF ]]; then
+	    RUNSIGOPT="${RUNSIGOPT} --refTagDiff $REFTAGDIFF"
+	fi
+	if [[ $REFTAGWV ]]; then
+	    RUNSIGOPT="${RUNSIGOPT} --refTagWV $REFTAGWV"
+	fi
 
+	echo "runsigopt is $RUNSIGOPT"
+	
 	cd Signal
-	echo "./runSignalScripts.sh -i $FILE -p $PROCS -f $CATS --ext $EXT --intLumi $INTLUMI $BATCHOPTION --scalesCorr $SCALESCORR --scalesGlobal $SCALESGLOBAL --bs $BS $MHREFOPT"
-	./runSignalScripts.sh -i $FILE -p $PROCS -f $CATS --ext $EXT --intLumi $INTLUMI $BATCHOPTION --smears $SMEARS --scales $SCALES --scalesCorr $SCALESCORR --scalesGlobal $SCALESGLOBAL --bs $BS $MHREFOPT
+	if [ $NOSYSTS == 1 ]; then
+	    echo "------------------------------------------------"
+	    echo "------------>> Running WITHOUT systematics"
+	    echo "------------------------------------------------"
+	    if [ $KEEPCURRENTFITS == 1 ]; then
+		echo "------------------------------------------------"
+		echo "------------>> Running KEEPING current signal fits"
+		echo "------------------------------------------------"
+		echo "./runSignalScripts.sh -i $FILE -p $PROCS -f $CATS --ext $EXT --intLumi $INTLUMI $BATCHOPTION --scalesCorr $SCALESCORR --scalesGlobal $SCALESGLOBAL --bs $BS $MHREFOPT --sigFitOnly --fTestOnly --sigPlotsOnly  --keepCurrentFits --noSyts $RUNSIGOPT"
+		./runSignalScripts.sh -i $FILE -p $PROCS -f $CATS --ext $EXT --intLumi $INTLUMI $BATCHOPTION --smears $SMEARS --scales $SCALES --scalesCorr $SCALESCORR --scalesGlobal $SCALESGLOBAL --bs $BS $MHREFOPT --sigFitOnly --fTestOnly --sigPlotsOnly --keepCurrentFits --noSysts $RUNSIGOPT
+	    else
+		echo "------------------------------------------------"
+		echo "------------>> Running WITHOUT KEEPING current signal fits"
+		echo "------------------------------------------------"
+		echo "./runSignalScripts.sh -i $FILE -p $PROCS -f $CATS --ext $EXT --intLumi $INTLUMI $BATCHOPTION --scalesCorr $SCALESCORR --scalesGlobal $SCALESGLOBAL --bs $BS $MHREFOPT --sigFitOnly --fTestOnly --sigPlotsOnly --noSysts $RUNSIGOPT"
+		./runSignalScripts.sh -i $FILE -p $PROCS -f $CATS --ext $EXT --intLumi $INTLUMI $BATCHOPTION --smears $SMEARS --scales $SCALES --scalesCorr $SCALESCORR --scalesGlobal $SCALESGLOBAL --bs $BS $MHREFOPT --sigFitOnly --fTestOnly --sigPlotsOnly --noSysts $RUNSIGOPT
+	    fi
+	else
+	    echo "------------------------------------------------"
+	    echo "------------>> Running WITH systematics"
+	    echo "------------------------------------------------"
+	    if [ $KEEPCURRENTFITS == 1 ]; then
+		echo "------------------------------------------------"
+		echo "------------>> Running KEEPING current signal fits"
+		echo "------------------------------------------------"
+		echo "./runSignalScripts.sh -i $FILE -p $PROCS -f $CATS --ext $EXT --intLumi $INTLUMI $BATCHOPTION --scalesCorr $SCALESCORR --scalesGlobal $SCALESGLOBAL --bs $BS $MHREFOPT  --keepCurrentFits $RUNSIGOPT"
+		./runSignalScripts.sh -i $FILE -p $PROCS -f $CATS --ext $EXT --intLumi $INTLUMI $BATCHOPTION --smears $SMEARS --scales $SCALES --scalesCorr $SCALESCORR --scalesGlobal $SCALESGLOBAL --bs $BS $MHREFOPT  --keepCurrentFits $RUNSIGOPT
+	    else
+		echo "------------------------------------------------"
+		echo "------------>> Running WITHOUT KEEPING current signal fits"
+		echo "------------------------------------------------"
+		echo "./runSignalScripts.sh -i $FILE -p $PROCS -f $CATS --ext $EXT --intLumi $INTLUMI $BATCHOPTION --scalesCorr $SCALESCORR --scalesGlobal $SCALESGLOBAL --bs $BS $MHREFOPT $RUNSIGOPT"
+		./runSignalScripts.sh -i $FILE -p $PROCS -f $CATS --ext $EXT --intLumi $INTLUMI $BATCHOPTION --smears $SMEARS --scales $SCALES --scalesCorr $SCALESCORR --scalesGlobal $SCALESGLOBAL --bs $BS $MHREFOPT $RUNSIGOPT
+	    fi
+	fi
 	cd -
 	if [ $USER == lcorpe ]; then
 	    echo " Processing of the Signal model for final fit exercice $EXT is done, see output here: https://lcorpe.web.cern.ch/lcorpe/$OUTDIR/ " |  mail -s "FINAL FITS: $EXT " lc1113@imperial.ac.uk
@@ -208,10 +293,23 @@ while [ $COUNTER -lt $SUPERLOOP ]; do
 	echo "------------------------------------------------"
 	echo "------------> Create DATACARD"
 	echo "------------------------------------------------"
+	OPTIONS=''
+	if [ $DATACARDDIFFERENTIAL == 1 ]; then
+	    OPTIONS=' --differential '
+	fi
+	if [ $NOSYSTS == 1 ]; then
+	    OPTIONS="$OPTIONS --statonly"
+	fi
+	if [ $MULTIPDF == 1 ]; then
+	    OPTIONS="$OPTIONS --isMultiPdf"
+	fi
+	if [ $ISTOSKIP == 1 ];then
+	    OPTIONS="$OPTIONS --toSkip=$TOSKIP"
+	fi
 
 	cd Datacard
-	echo "./makeParametricModelDatacardFLASHgg.py -i $FILE  -o Datacard_13TeV_${EXT}.txt -p $PROCS -c SigmaMpTTag_0,SigmaMpTTag_1,SigmaMpTTag_2 --photonCatScales $SCALES --photonCatSmears $SMEARS --isMultiPdf --mass 125 --intLumi $INTLUMI #--theoryNormFactors norm_factors.py #--submitSelf #"
-	./makeParametricModelDatacardFLASHgg.py -i $FILE  -o Datacard_13TeV_${EXT}.txt --ext ${EXT} -p $PROCS -c SigmaMpTTag_0,SigmaMpTTag_1,SigmaMpTTag_2 --photonCatScales $SCALES --photonCatSmears $SMEARS --isMultiPdf --mass 125 --intLumi $INTLUMI #--theoryNormFactors norm_factors.py #--submitSelf #
+	echo "./makeParametricModelDatacardFLASHgg.py -i $FILE  -o Datacard_13TeV_${EXT}.txt -p $PROCS -c $CATS --photonCatScales $SCALES --photonCatSmears $SMEARS --mass 125 --intLumi $INTLUMI $OPTIONS #--theoryNormFactors norm_factors.py  #--submitSelf #"
+	./makeParametricModelDatacardFLASHgg.py -i $FILE  -o Datacard_13TeV_${EXT}.txt --ext ${EXT} -p $PROCS -c $CATS --photonCatScales $SCALES --photonCatSmears $SMEARS --mass 125 --intLumi $INTLUMI $OPTIONS #--theoryNormFactors norm_factors.py #--submitSelf #
 	cd -
     fi
 
