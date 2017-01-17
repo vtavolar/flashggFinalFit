@@ -27,6 +27,7 @@
 #include "TFitResult.h"
 
 #include "boost/program_options.hpp"
+#include "boost/algorithm/string.hpp"
 #include "boost/algorithm/string/split.hpp"
 #include "boost/algorithm/string/classification.hpp"
 #include "boost/algorithm/string/predicate.hpp"
@@ -175,7 +176,7 @@ int main(int argc, char *argv[]){
   float itsOK       = 0.1; // if  myDistance < itsOK suggest the #gauss that fulfill this condition
 
   OptionParser(argc,argv);
-
+  verbose_=true;
   if (verbose_) {
     std::cout << "[INFO] datfilename_	" << datfilename_ << std::endl;
   }
@@ -239,7 +240,7 @@ int main(int argc, char *argv[]){
 
   // Open input files using WS wrapper.
   WSTFileWrapper *inWS 
-    = new WSTFileWrapper(filename_,"tagsDumper/cms_hgg_13TeV");
+    = new WSTFileWrapper(filename_,"cms_hgg_13TeV");
   if(verbose_) std::cout << "[INFO] Opened files OK!" << std::endl;
 
   mass = (RooRealVar*)inWS->var("CMS_hgg_mass");
@@ -332,6 +333,8 @@ int main(int argc, char *argv[]){
     cout << "[TEX] \\maketitle" << endl;
     cout << "[TEX] " << endl;
     
+
+    std::string catForTex;
     for (unsigned int p=0; p<procs.size(); p++){
       
       // get desired proc
@@ -353,6 +356,9 @@ int main(int argc, char *argv[]){
       
       // access dataset and immediately reduce it!
       if (isFlashgg_){
+	if(verbose_){
+	  std::cout<<"Looking for dataset "<<Form("%s_%d_13TeV_%s",proc.c_str(),mass_,flashggCats_[cat].c_str())<<std::endl;
+	}
 	RooDataSet *data0   = (RooDataSet*)inWS->data(
 						      Form("%s_%d_13TeV_%s",proc.c_str(),mass_,flashggCats_[cat].c_str()));
         if(verbose_) {
@@ -440,8 +446,10 @@ int main(int argc, char *argv[]){
 		  << " Exit." << std::endl;
         exit(1);
       }
-			
-      cout <<  Form("[TEX] \\section{RV proc %s cat $%s$}", proc.c_str(), flashggCats_[cat].c_str()) << endl;
+      
+      catForTex = boost::replace_all_copy(flashggCats_[cat], "_", "\\_");
+      cout << catForTex << endl;
+      cout <<  Form("[TEX] \\section{RV proc %s cat $$%s$$}", proc.c_str(), catForTex.c_str()) << endl;
       cout << "[TEX] \\begin{tabular}{ l l l l l l l }" << endl;
       cout << "[TEX] \\hline" << endl;
       cout << "[TEX]   Order & Mean & Sigma & Dist & chi2 & entries & dist/entrie\\\\" << endl;
@@ -630,14 +638,14 @@ int main(int argc, char *argv[]){
       cout << "[TEX] "<< endl;
       cout << "[TEX] \\begin{figure}[htbp]" << endl;
       cout << "[TEX] \\begin{center}" << endl;
-      cout << Form("[TEX] \\includegraphics[width=15.0cm]{%s/sigfTest/rv_%s_%s}"  , outdir_.c_str(),proc.c_str(), flashggCats_[cat].c_str()) << endl;
+      cout << Form("[TEX] \\includegraphics[width=15.0cm]{{%s/sigfTest/rv_%s_%s}.pdf}"  , outdir_.c_str(),proc.c_str(), flashggCats_[cat].c_str()) << endl;
       cout << "[TEX] \\end{center}" << endl;
       cout << "[TEX] \\end{figure}" << endl;
       cout << "[TEX] \\begin{figure}[htbp]" << endl;
       cout << "[TEX] \\begin{center}" << endl;
-      cout << Form("[TEX] \\includegraphics[width=5.0cm]{%s/sigfTest/res_%s_cat_%s_rv}\\\\"  , outdir_.c_str(),proc.c_str(), flashggCats_[cat].c_str()) << endl;
-      cout << Form("[TEX] \\includegraphics[width=5.0cm]{%s/sigfTest/pull_%s_cat_%s_rv}" , outdir_.c_str(),proc.c_str(), flashggCats_[cat].c_str()) << endl;
-      cout << Form("[TEX] \\includegraphics[width=5.0cm]{%s/sigfTest/ppull_%s_cat_%s_rv}", outdir_.c_str(),proc.c_str(), flashggCats_[cat].c_str()) << endl;
+      cout << Form("[TEX] \\includegraphics[width=5.0cm]{{%s/sigfTest/res_%s_cat_%s_rv}.pdf}\\\\"  , outdir_.c_str(),proc.c_str(), flashggCats_[cat].c_str()) << endl;
+      cout << Form("[TEX] \\includegraphics[width=5.0cm]{{%s/sigfTest/pull_%s_cat_%s_rv}.pdf}" , outdir_.c_str(),proc.c_str(), flashggCats_[cat].c_str()) << endl;
+      cout << Form("[TEX] \\includegraphics[width=5.0cm]{{%s/sigfTest/ppull_%s_cat_%s_rv}.pdf}", outdir_.c_str(),proc.c_str(), flashggCats_[cat].c_str()) << endl;
       cout << "[TEX] \\end{center}" << endl;
       cout << "[TEX] \\end{figure}" << endl;
 
@@ -705,7 +713,9 @@ int main(int argc, char *argv[]){
 
       dataWV->plotOn(plotsWV[proc][cat]);
 
-      cout <<  Form("[TEX] \\section{WV proc %s cat $%s$}", proc.c_str(), flashggCats_[cat].c_str()) << endl;
+      catForTex = boost::replace_all_copy(flashggCats_[cat], "_", "\\_");
+      cout << catForTex << endl;
+      cout <<  Form("[TEX] \\section{WV proc %s cat $$%s$$}", proc.c_str(), catForTex.c_str()) << endl;
       cout << "[TEX] \\begin{tabular}{ l l l l l l l }" << endl;
       cout << "[TEX] \\hline" << endl;
       cout << "[TEX]   Order & Mean & Sigma & Dist & chi2 & entries & dist/entries\\\\" << endl;
@@ -875,14 +885,14 @@ int main(int argc, char *argv[]){
       cout << "[TEX] "<< endl;
       cout << "[TEX] \\begin{figure}[htbp]" << endl;
       cout << "[TEX] \\begin{center}" << endl;
-      cout << Form("[TEX] \\includegraphics[width=15.0cm]{%s/sigfTest/wv_%s_%s}"  , outdir_.c_str(),proc.c_str(), flashggCats_[cat].c_str()) << endl;
+      cout << Form("[TEX] \\includegraphics[width=15.0cm]{{%s/sigfTest/wv_%s_%s}.pdf}"  , outdir_.c_str(),proc.c_str(), flashggCats_[cat].c_str()) << endl;
       cout << "[TEX] \\end{center}" << endl;
       cout << "[TEX] \\end{figure}" << endl;
       cout << "[TEX] \\begin{figure}[htbp]" << endl;
       cout << "[TEX] \\begin{center}" << endl;
-      cout << Form("[TEX] \\includegraphics[width=5.0cm]{%s/sigfTest/res_%s_cat_%s_wv}\\\\"  , outdir_.c_str(),proc.c_str(), flashggCats_[cat].c_str()) << endl;
-      cout << Form("[TEX] \\includegraphics[width=5.0cm]{%s/sigfTest/pull_%s_cat_%s_wv}" , outdir_.c_str(),proc.c_str(), flashggCats_[cat].c_str()) << endl;
-      cout << Form("[TEX] \\includegraphics[width=5.0cm]{%s/sigfTest/ppull_%s_cat_%s_wv}", outdir_.c_str(),proc.c_str(), flashggCats_[cat].c_str()) << endl;
+      cout << Form("[TEX] \\includegraphics[width=5.0cm]{{%s/sigfTest/res_%s_cat_%s_wv}.pdf}\\\\"  , outdir_.c_str(),proc.c_str(), flashggCats_[cat].c_str()) << endl;
+      cout << Form("[TEX] \\includegraphics[width=5.0cm]{{%s/sigfTest/pull_%s_cat_%s_wv}.pdf}" , outdir_.c_str(),proc.c_str(), flashggCats_[cat].c_str()) << endl;
+      cout << Form("[TEX] \\includegraphics[width=5.0cm]{{%s/sigfTest/ppull_%s_cat_%s_wv}.pdf}", outdir_.c_str(),proc.c_str(), flashggCats_[cat].c_str()) << endl;
       cout << "[TEX] \\end{center}" << endl;
       cout << "[TEX] \\end{figure}" << endl;
 
