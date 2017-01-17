@@ -146,7 +146,7 @@ TGraph * Normalization_8TeV::GetSigmaGraph(TString process)
 	std::map<double, double> * XSectionMap = 0 ;
 	if ( process == "ggh" || process == "ggH") {
 		XSectionMap = &XSectionMap_ggh;
-	} else if ( process == "InsideAcceptance" || process == "OutsideAcceptance"){
+	} else if ( process.Contains("InsideAcceptance") || process.Contains("OutsideAcceptance")){
 	  	XSectionMap = &XSectionMap_all;
 	} else if ( process == "vbf" || process == "VBF" ) { // FIXME
 		XSectionMap = &XSectionMap_vbf;
