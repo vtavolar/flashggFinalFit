@@ -54,8 +54,11 @@ void LinearInterp::interpolate(int nGaussians){
     for (unsigned int i=0; i<allMH_.size(); i++){
       int mh = allMH_[i];
       xValues.push_back(double(mh));
+      std::cout<<"mh "<<mh<<std::endl;
       dmValues.push_back(fitParams[mh][Form("dm_mh%d_g%d",mh,g)]->getVal());
+      std::cout<<"dmValue "<<fitParams[mh][Form("dm_mh%d_g%d",mh,g)]->getVal()<<std::endl;
       sigmaValues.push_back(fitParams[mh][Form("sigma_mh%d_g%d",mh,g)]->getVal());
+      std::cout<<"sigmaValue "<<fitParams[mh][Form("sigma_mh%d_g%d",mh,g)]->getVal()<<std::endl;
     }
     assert(xValues.size()==dmValues.size());
     assert(xValues.size()==sigmaValues.size());
