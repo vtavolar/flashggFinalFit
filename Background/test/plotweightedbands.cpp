@@ -211,6 +211,7 @@ int main(int argc, char *argv[]) {
   if (verbose_) std::cout << "[INFO] Opened file " << fin << std::endl; 
   
   RooWorkspace *win = (RooWorkspace*)fin->Get("w");  
+  win->Print();
   RooWorkspace *win2 = win;    
   RooAbsData *datain = win2->data("data_obs");
   
@@ -231,6 +232,7 @@ int main(int argc, char *argv[]) {
   }
   
   win->loadSnapshot("MultiDimFit"); 
+  std::cout<<"after loadsnapshot"<<std::endl;
 
   RooFitResult *fit_s = 0;
   
@@ -238,7 +240,9 @@ int main(int argc, char *argv[]) {
   TFile *ftmp = new TFile("tmpfile.root","RECREATE");
   
   RooRealVar *MH = win->var("MH");
-  RooRealVar *r = win->var("r");
+  std::cout<<MH<<std::endl;
+  MH->Print();
+  RooRealVar *r = win->var("r0");
   std::cout << " VALUES OF MH " << MH->getVal() << " and r " << r->getVal() <<std::endl;
 
   RooSimultaneous *sbpdf = (RooSimultaneous*)win->pdf("model_s");
@@ -548,7 +552,7 @@ int main(int argc, char *argv[]) {
   
   TGraphAsymmErrors *errgraph = new TGraphAsymmErrors;
   TGraphAsymmErrors *errgraph2 = new TGraphAsymmErrors;
-
+  
   TGraphAsymmErrors *errgraphsub = new TGraphAsymmErrors;
   TGraphAsymmErrors *errgraphsub2 = new TGraphAsymmErrors;  
   
@@ -577,7 +581,7 @@ int main(int argc, char *argv[]) {
   gEnv->SetValue("TFile.Recover", 0);
   TChain *chain = new TChain("limit");
   chain->Add("*higgsCombinecombout_step2_done*.root"); //FIXME make this dynamic ?
-
+  
   TObjArray *fileElements=chain->GetListOfFiles();
   TIter next(fileElements);
   TChainElement *chEl=0;
@@ -585,7 +589,8 @@ int main(int argc, char *argv[]) {
     printf("[INFO] opening file %s \n", chEl->GetTitle() );
     TFile f(chEl->GetTitle());
     printf("[INFO] reading toy\n");
-    RooAbsData *toy = (RooAbsData*)f.FindObjectAny("toy_asimov");
+    //    RooAbsData *toy = (RooAbsData*)f.FindObjectAny("toy_asimov");
+    RooAbsData *toy = (RooAbsData*)f.Get("toys/toy_asimov");
     
     if (!toy) { 
       printf("skipping\n");
@@ -603,7 +608,7 @@ int main(int argc, char *argv[]) {
       TH1D *hsbtmp = (TH1D*)catdata->createHistogram("hsbtmp",*mass,Binning(nbins,lowedge,highedge));
       for (int ibin=1; ibin<=hdummyweight->GetXaxis()->GetNbins(); ++ibin) {
         if(hsbtmp->GetBinContent(ibin) < 1.e10){ 
-        errquants[icat][ibin-1].push_back(hsbtmp->GetBinContent(ibin));
+	  errquants[icat][ibin-1].push_back(hsbtmp->GetBinContent(ibin));
         }
       }
       delete hsbtmp;    
@@ -613,6 +618,8 @@ int main(int argc, char *argv[]) {
     delete toy;
     
   }  
+  
+  std::cout<<"Ntoys "<<ntoys<<std::endl;
   
   const double quantmed = 0.5;
   const double quantminusone = 0.5*(1.0+ TMath::Erf(-1.0/sqrt(2)));
@@ -784,12 +791,12 @@ int main(int argc, char *argv[]) {
     TGraphAsymmErrors *twosigma = twosigmas[i];
     twosigma->SetFillColor(kYellow);
     twosigma->SetFillStyle(1001);
-    twosigma->Draw("LE3SAME");  
+    ///    twosigma->Draw("LE3SAME");  
     
     TGraphAsymmErrors *onesigma = onesigmas[i];
     onesigma->SetFillColor(kGreen);
     onesigma->SetFillStyle(1001);
-    onesigma->Draw("LE3SAME");   
+    ////    onesigma->Draw("LE3SAME");   
     std::cout << "[INFO] drew bands on main plot" << std::endl; 
 
     if (i<ncats) {
@@ -848,8 +855,8 @@ int main(int argc, char *argv[]) {
     leg2->AddEntry(plotdata,"Data","PE");  
     leg2->AddEntry(hsigbkg,"S+B fit","L");  
     leg2->AddEntry(hbkg,"B component","L");  
-    leg2->AddEntry(onesigma,"#pm1 #sigma","F");  
-    leg2->AddEntry(twosigma,"#pm2 #sigma","F");       
+    //    leg2->AddEntry(onesigma,"#pm1 #sigma","F");  
+    //    leg2->AddEntry(twosigma,"#pm2 #sigma","F");       
     leg2->SetBorderSize(0);
     leg2->SetFillStyle(0);
     leg2->Draw();      
@@ -926,12 +933,12 @@ int main(int argc, char *argv[]) {
     TGraphAsymmErrors *restwosigma = restwosigmas[i];
     restwosigma->SetFillColor(kYellow);
     restwosigma->SetFillStyle(1001);
-    restwosigma->Draw("LE3SAME");  
+    //    restwosigma->Draw("LE3SAME");  
     
     TGraphAsymmErrors *resonesigma = resonesigmas[i];
     resonesigma->SetFillColor(kGreen);
     resonesigma->SetFillStyle(1001);
-    resonesigma->Draw("LE3SAME");       
+    //    resonesigma->Draw("LE3SAME");       
     
     TLine *line3 = new TLine(lowedge,0.,highedge,0.);
     line3->SetLineColor(kRed);
