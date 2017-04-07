@@ -206,7 +206,7 @@ int main(int argc, char *argv[]){
   int nBinsFit = 160; // MDDB make it a parameter
 	
   vector<int> skipMasses;	
-  bool binnedFit = true;
+  bool binnedFit = false;
   if (unbinnedFit_) binnedFit=false;
   
   // silence roofit
@@ -427,6 +427,7 @@ int main(int argc, char *argv[]){
             << "[INFO] Retrieved combined RV/WV data " 
             << Form("%s_%d_13TeV_%s",proc.c_str(),mass_,flashggCats_[cat].c_str()) 
             << "? "<< data<<std::endl;
+	  std::cout<<"[DEBUGVRT] mean is "<<data->mean(*mass)<<std::endl;
         }
         
         // now split RV/WV scenarios
@@ -436,9 +437,13 @@ int main(int argc, char *argv[]){
 	//dataRV = new RooDataSet("dataRV","dataRV",&*data,*(data->get()),"dZ<1");
 	//dataWV = new RooDataSet("dataWV","dataWV",&*data,*(data->get()),"dZ>=1");
 	if (verbose_) std::cout << "[INFO] Retrieved unreduced data"<< *data0  << std::endl;
+	if (verbose_) std::cout<<"[DEBUGVRT] unreduced mean is "<<data0->mean(*mass)<<std::endl;
 	if (verbose_) std::cout << "[INFO] Retrieved reduced   data"<< *data    << std::endl;
+	if (verbose_) std::cout<<"[DEBUGVRT] reduced mean is "<<data->mean(*mass)<<std::endl;
 	if (verbose_) std::cout << "[INFO] Retrieved reducedRV data"<< *dataRV  << std::endl;
+	if (verbose_) std::cout<<"[DEBUGVRT] reducedRV mean is "<<dataRV->mean(*mass)<<std::endl;
 	if (verbose_) std::cout << "[INFO] Retrieved reducedWV data"<< *dataWV  << std::endl;
+	if (verbose_) std::cout<<"[DEBUGVRT] reducedWV mean is "<<dataWV->mean(*mass)<<std::endl;
 
       } else { // not flash!
       
@@ -479,6 +484,7 @@ int main(int argc, char *argv[]){
       TCanvas *ccpPullRV = new TCanvas("ccpPullRV","PullsProjections",600,600);
 	
       RooDataHist * dataRVbinned = new RooDataHist("dataRVbinned","dataRVbinned",*mass,*dataRV); 
+      if (verbose_) std::cout<<"[DEBUGVRT] dataRVbinned mean is "<<dataRVbinned->mean(*mass)<<std::endl;
       
       while (prob<rv_prob_limit && order <5){ // MDDB make it configurable
 			  
