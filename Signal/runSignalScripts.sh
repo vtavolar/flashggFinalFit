@@ -122,7 +122,7 @@ if [[ $BATCH == "LSF" ]]; then
 DEFAULTQUEUE=1nh
 fi
 if [[ $BATCH == "T3CH" ]]; then
-DEFAULTQUEUE=all.q
+DEFAULTQUEUE='short.q -l h_vmem=4g'
 fi
 
 if [[ $BS == "" ]]; then
@@ -156,8 +156,8 @@ else
       echo "./bin/signalFTest -i $FILE -d dat/newConfig_$EXT.dat -p $PROCS -f $CATS -o $OUTDIR"
       ./bin/signalFTest -i $FILE -d dat/newConfig_$EXT.dat -p $PROCS -f $CATS -o $OUTDIR
     else
-      echo "./python/submitSignaFTest.py --procs $PROCS --flashggCats $CATS --outDir $OUTDIR --i $FILE --batch $BATCH -q $DEFAULTQUEUE"
-       ./python/submitSignaFTest.py --procs $PROCS --flashggCats $CATS --outDir $OUTDIR --i $FILE --batch $BATCH -q $DEFAULTQUEUE
+      echo "./python/submitSignaFTest.py --procs $PROCS --flashggCats $CATS --outDir $OUTDIR --i $FILE --batch $BATCH -q '$DEFAULTQUEUE'"
+       ./python/submitSignaFTest.py --procs $PROCS --flashggCats $CATS --outDir $OUTDIR --i $FILE --batch $BATCH -q "$DEFAULTQUEUE"
 
       PEND=`ls -l $OUTDIR/fTestJobs/sub*| grep -v "\.run" | grep -v "\.done" | grep -v "\.fail" | grep -v "\.err" |grep -v "\.log"  |wc -l`
       TOTAL=`ls -l $OUTDIR/fTestJobs/sub*| grep "\.sh"  |wc -l`
@@ -218,7 +218,7 @@ fi
 if [ $SIGFITONLY == 1 ]; then
   DONE=`ls -l $OUTDIR/sigfit/SignalFitJobs/sub* | grep "\.done" |wc -l`
   LOGS=`ls -l $OUTDIR/sigfit/SignalFitJobs/sub* | grep "\.log" |wc -l`
-  ERRS=`ls -l $OUTDIR/sigfit/SignalFitJobs/sub* | grep "\.errs" |wc -l`
+  ERRS=`ls -l $OUTDIR/sigfit/SignalFitJobs/sub* | grep "\.err" |wc -l`
   if [ $DONE == $LOGS -a $LOGS == $ERRS -a $KEEPCURRENTFITS == 1]; then
       $KEEPCURRENTFITS == 1
   else
@@ -268,10 +268,10 @@ if [ $SIGFITONLY == 1 ]; then
     else
 	if [[ $NOSYSTS == 0 ]]; then
 	    echo " ./python/submitSignalFit.py -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 -s dat/photonCatSyst_$EXT.dat --procs $PROCS -o $OUTDIR/CMS-HGG_sigfit_$EXT.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI --batch $BATCH -q $DEFAULTQUEUE $BSOPT $SIGFITOPTS "
-	    ./python/submitSignalFit.py -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 -s dat/photonCatSyst_$EXT.dat --procs $PROCS -o $OUTDIR/CMS-HGG_sigfit_$EXT.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI --batch $BATCH -q $DEFAULTQUEUE $BSOPT $MHREFOPT $SIGFITOPTS
+	    ./python/submitSignalFit.py -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 -s dat/photonCatSyst_$EXT.dat --procs $PROCS -o $OUTDIR/CMS-HGG_sigfit_$EXT.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI --batch $BATCH -q "$DEFAULTQUEUE" $BSOPT $MHREFOPT $SIGFITOPTS
 	else
 	    echo " ./python/submitSignalFit.py -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130  --procs $PROCS -o $OUTDIR/CMS-HGG_sigfit_$EXT.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI --batch $BATCH -q $DEFAULTQUEUE $BSOPT $SIGFITOPTS"
-	    ./python/submitSignalFit.py -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130  --procs $PROCS -o $OUTDIR/CMS-HGG_sigfit_$EXT.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI --batch $BATCH -q $DEFAULTQUEUE $BSOPT $MHREFOPT $SIGFITOPTS
+	    ./python/submitSignalFit.py -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130  --procs $PROCS -o $OUTDIR/CMS-HGG_sigfit_$EXT.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI --batch $BATCH -q "$DEFAULTQUEUE" $BSOPT $MHREFOPT $SIGFITOPTS
 	fi
   
       PEND=`ls -l $OUTDIR/sigfit/SignalFitJobs/sub*| grep -v "\.run" | grep -v "\.done" | grep -v "\.fail" | grep -v "\.err" |grep -v "\.log"  |wc -l`
