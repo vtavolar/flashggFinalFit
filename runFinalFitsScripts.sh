@@ -10,7 +10,7 @@ CATS="UntaggedTag_0,UntaggedTag_1,UntaggedTag_2,UntaggedTag_3,UntaggedTag_4,VBFT
 SCALESCORR="MaterialCentral,MaterialForward"
 SCALESGLOBAL="NonLinearity,Geant4,LightYield,Absolute"
 
-SCALES="HighR9EE,LowR9EE,HighR9EB,LowR9EB"
+SCALES="HighR9EE,LowR9EE,HighR9EB,LowR9EB,Gain1EB,Gain6EB"
 #SMEARS="HighR9EE,LowR9EE,HighR9EBRho,LowR9EBRho,HighR9EBPhi,LowR9EBPhi"
 SMEARS="HighR9EE,LowR9EE,HighR9EB,LowR9EB" #DRY RUN
 PSEUDODATADAT=""
@@ -356,75 +356,75 @@ while [ $COUNTER -lt $SUPERLOOP ]; do
 	sed -i -e "s/\!INTLUMI\!/$INTLUMI/g" combinePlotsOptions_${EXT}${FAKE}.dat
 
 
-	if [ $COMBINEPLOTSONLY == 0 ]; then
-	    echo "./combineHarvester.py -d combineHarvesterOptions13TeV_$EXT.dat -q $DEFAULTQUEUE --batch $BATCH --verbose"
-	    ./combineHarvester.py -d combineHarvesterOptions13TeV_${EXT}${FAKE}.dat -q $DEFAULTQUEUE --batch $BATCH --verbose #--S0
-
-	    JOBS=999
-	    RUN=999
-	    PEND=999
-	    FAIL=999
-	    DONE=999
-
-	    while (( $RUN > 0 ));do
-		JOBS=`find combineJobs13TeV_$EXT/   -name "*.sh" | wc -l`
-#echo "JOBS=`find combineJobs13TeV_$EXT/ -name "*.sh" | wc -l`"
-		DONE=`find combineJobs13TeV_$EXT/   -name "*.sh.done" | wc -l`
-		FAIL=`find combineJobs13TeV_$EXT/   -name "*.sh.fail" | wc -l`
-		((RUN=$JOBS-$DONE-$FAIL-1))
-		echo "RUN=$RUN"
-		echo "JOBS=$JOBS"
-		echo "DONE=$DONE"
-		echo "FAIL=$FAIL"
-		sleep 10
-
-		echo "[INFO] Processing $JOBS jobs: PEND $PEND, RUN $RUN, FAIL $FAIL"
-		done
-
-		echo "[INFO] ------> All jobs done"
-	fi
-	./combineHarvester.py --hadd combineJobs13TeV_$EXT
-
-	LEDGER=" --it $COUNTER --itLedger itLedger_$EXT.txt"
-
-#./makeCombinePlots.py -f combineJobs13TeV_pilottest090915/Asymptotic/Asymptotic.root --limit -b
-#./makeCombinePlots.py -f combineJobs13TeV_pilottest090915/ExpProfileLikelihood/ExpProfileLikelihood.root --pval -b
-	echo INTLUMI = "$INTLUMI"
-	echo "./makeCombinePlots.py -d combinePlotsOptions_${EXT}${FAKE}.dat -b $LEDGER "
-	./makeCombinePlots.py -d combinePlotsOptions_$EXT${FAKE}.dat -b $LEDGER
-	./allPlots_${EXT}${FAKE}.sh
-#./makeCombinePlots.py -f combineJobs13TeV_$EXT/MuScanFloatMH/MuScanFloatMH.root --mu -t "#sqrt{s}\=13TeV L\=$INTLUMI fb^{-1}" -o muFloatMH -b $LEDGER #for some reason doesn't work in datfile
-#./makeCombinePlots.py -f combineJobs13TeV_$EXT/MuScanFixMH/MuScanFixMH.root --mu -t "#sqrt{s}\=13TeV L\=$INTLUMI fb^{-1}" -o muFixMH -b $LEDGER #for some reason doesn't work in datfile
-#./makeCombinePlots.py -f combineJobs13TeV_$EXT/RVRFScan/RVRFScan.root --rvrf -t "#sqrt{s}\=13TeV L\=$INTLUMI fb^{-1}" -o RVRF --xbinning 30,-1.5,2.5 --ybinning 30,-3,8 -b $LEDGER #
-#./makeCombinePlots.py -f combineJobs13TeV_$EXT/RVRFScanFloatMH/RVRFScanFloatMH.root --rvrf -t "#sqrt{s}\=13TeV L\=$INTLUMI fb^{-1}" -o RVRFScanFloatMH --xbinning 30,-1.5,2.5 --ybinning 30,-3,8 -b $LEDGER #
-#./makeCombinePlots.py -f combineJobs13TeV_$EXT/RVRFScanFixMH/RVRFScanFixMH.root --rvrf -t "#sqrt{s}\=13TeV L\=$INTLUMI fb^{-1}" -o RVRFScanFixMH --xbinning 30,-1.5,2.5 --ybinning 30,-3,8 -b $LEDGER #
-
-	mkdir -p $OUTDIR/combinePlots
-	cp *pdf $OUTDIR/combinePlots/.
-	cp *png $OUTDIR/combinePlots/.
-#rm *pdf
-#rm *png
-
-	if [ $USER == "lcorpe" ]; then
-	    cp -r $OUTDIR ~/www/${OUTDIR}
-	    cp -r $OUTDIR ~/www/${OUTDIR}_${COUNTER}
-	    cp ~lcorpe/public/index.php ~/www/$OUTDIR/combinePlots/.
-	    cp ~lcorpe/public/index.php ~/www/${OUTDIR}_${COUNTER}/combinePlots/.
-	    echo "plots available at: "
-	    echo "https://lcorpe.web.cern.ch/lcorpe/$OUTDIR"
-	    echo "or https://lcorpe.web.cern.ch/lcorpe/${OUTDIR}_${COUNTER}"
-	fi
-	if [ $USER == "lc1113" ]; then
-	    cp -r $OUTDIR ~lc1113/public_html/
-	    cp -r $OUTDIR ~lc1113/public_html/${OUTDIR}_${COUNTER}
-	    cp ~lc1113/index.php ~lc1113/public_html/$OUTDIR/combinePlots/.
-	    cp ~lc1113/index.php ~lc1113/public_html/${OUTDIR}_$COUNTER/combinePlots/.
-	    echo "plots available at: "
-	    echo "http://www.hep.ph.imperial.ac.uk/~lc1113/$OUTDIR"
-	    echo "or http://www.hep.ph.imperial.ac.uk/~lc1113/${OUTDIR}_${COUNTER}"
-
-	fi
-	cd -
+####	if [ $COMBINEPLOTSONLY == 0 ]; then
+####	    echo "./combineHarvester.py -d combineHarvesterOptions13TeV_$EXT.dat -q $DEFAULTQUEUE --batch $BATCH --verbose"
+####	    ./combineHarvester.py -d combineHarvesterOptions13TeV_${EXT}${FAKE}.dat -q $DEFAULTQUEUE --batch $BATCH --verbose #--S0
+####
+####	    JOBS=999
+####	    RUN=999
+####	    PEND=999
+####	    FAIL=999
+####	    DONE=999
+####
+####	    while (( $RUN > 0 ));do
+####		JOBS=`find combineJobs13TeV_$EXT/   -name "*.sh" | wc -l`
+#####echo "JOBS=`find combineJobs13TeV_$EXT/ -name "*.sh" | wc -l`"
+####		DONE=`find combineJobs13TeV_$EXT/   -name "*.sh.done" | wc -l`
+####		FAIL=`find combineJobs13TeV_$EXT/   -name "*.sh.fail" | wc -l`
+####		((RUN=$JOBS-$DONE-$FAIL-1))
+####		echo "RUN=$RUN"
+####		echo "JOBS=$JOBS"
+####		echo "DONE=$DONE"
+####		echo "FAIL=$FAIL"
+####		sleep 10
+####
+####		echo "[INFO] Processing $JOBS jobs: PEND $PEND, RUN $RUN, FAIL $FAIL"
+####		done
+####
+####		echo "[INFO] ------> All jobs done"
+####	fi
+####	./combineHarvester.py --hadd combineJobs13TeV_$EXT
+####
+####	LEDGER=" --it $COUNTER --itLedger itLedger_$EXT.txt"
+####
+#####./makeCombinePlots.py -f combineJobs13TeV_pilottest090915/Asymptotic/Asymptotic.root --limit -b
+#####./makeCombinePlots.py -f combineJobs13TeV_pilottest090915/ExpProfileLikelihood/ExpProfileLikelihood.root --pval -b
+####	echo INTLUMI = "$INTLUMI"
+####	echo "./makeCombinePlots.py -d combinePlotsOptions_${EXT}${FAKE}.dat -b $LEDGER "
+####	./makeCombinePlots.py -d combinePlotsOptions_$EXT${FAKE}.dat -b $LEDGER
+####	./allPlots_${EXT}${FAKE}.sh
+#####./makeCombinePlots.py -f combineJobs13TeV_$EXT/MuScanFloatMH/MuScanFloatMH.root --mu -t "#sqrt{s}\=13TeV L\=$INTLUMI fb^{-1}" -o muFloatMH -b $LEDGER #for some reason doesn't work in datfile
+#####./makeCombinePlots.py -f combineJobs13TeV_$EXT/MuScanFixMH/MuScanFixMH.root --mu -t "#sqrt{s}\=13TeV L\=$INTLUMI fb^{-1}" -o muFixMH -b $LEDGER #for some reason doesn't work in datfile
+#####./makeCombinePlots.py -f combineJobs13TeV_$EXT/RVRFScan/RVRFScan.root --rvrf -t "#sqrt{s}\=13TeV L\=$INTLUMI fb^{-1}" -o RVRF --xbinning 30,-1.5,2.5 --ybinning 30,-3,8 -b $LEDGER #
+#####./makeCombinePlots.py -f combineJobs13TeV_$EXT/RVRFScanFloatMH/RVRFScanFloatMH.root --rvrf -t "#sqrt{s}\=13TeV L\=$INTLUMI fb^{-1}" -o RVRFScanFloatMH --xbinning 30,-1.5,2.5 --ybinning 30,-3,8 -b $LEDGER #
+#####./makeCombinePlots.py -f combineJobs13TeV_$EXT/RVRFScanFixMH/RVRFScanFixMH.root --rvrf -t "#sqrt{s}\=13TeV L\=$INTLUMI fb^{-1}" -o RVRFScanFixMH --xbinning 30,-1.5,2.5 --ybinning 30,-3,8 -b $LEDGER #
+####
+####	mkdir -p $OUTDIR/combinePlots
+####	cp *pdf $OUTDIR/combinePlots/.
+####	cp *png $OUTDIR/combinePlots/.
+#####rm *pdf
+#####rm *png
+####
+####	if [ $USER == "lcorpe" ]; then
+####	    cp -r $OUTDIR ~/www/${OUTDIR}
+####	    cp -r $OUTDIR ~/www/${OUTDIR}_${COUNTER}
+####	    cp ~lcorpe/public/index.php ~/www/$OUTDIR/combinePlots/.
+####	    cp ~lcorpe/public/index.php ~/www/${OUTDIR}_${COUNTER}/combinePlots/.
+####	    echo "plots available at: "
+####	    echo "https://lcorpe.web.cern.ch/lcorpe/$OUTDIR"
+####	    echo "or https://lcorpe.web.cern.ch/lcorpe/${OUTDIR}_${COUNTER}"
+####	fi
+####	if [ $USER == "lc1113" ]; then
+####	    cp -r $OUTDIR ~lc1113/public_html/
+####	    cp -r $OUTDIR ~lc1113/public_html/${OUTDIR}_${COUNTER}
+####	    cp ~lc1113/index.php ~lc1113/public_html/$OUTDIR/combinePlots/.
+####	    cp ~lc1113/index.php ~lc1113/public_html/${OUTDIR}_$COUNTER/combinePlots/.
+####	    echo "plots available at: "
+####	    echo "http://www.hep.ph.imperial.ac.uk/~lc1113/$OUTDIR"
+####	    echo "or http://www.hep.ph.imperial.ac.uk/~lc1113/${OUTDIR}_${COUNTER}"
+####
+####	fi
+####	cd -
     fi
 
     if [ $USER == xlcorpe ] || [ $USER == lc1113 ]; then
