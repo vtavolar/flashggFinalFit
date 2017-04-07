@@ -1,0 +1,4 @@
+###########
+bash oneround_fidXsec.sh fidXsec_moriond17_reminiaod_corrections none runFinalFitsScripts_fiducial_xsec_moriond17_reminiaod_v2.sh Datacard_13TeV_fiducialxsec_moriond17_reminiaod_corrections.txt fiducialxsec_moriond17_reminiaod_corrections
+
+
