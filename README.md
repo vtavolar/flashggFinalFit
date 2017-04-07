@@ -12,7 +12,7 @@ git cms-init
 git clone https://github.com/cms-analysis/HiggsAnalysis-CombinedLimit.git HiggsAnalysis/CombinedLimit
 cd ${CMSSW_BASE}/src/HiggsAnalysis/CombinedLimit
 git fetch origin
-git checkout v6.2.1 
+git checkout v6.3.1 
 cd ${CMSSW_BASE}/src
 # Install Flashgg Final Fit packages
 git clone git@github.com:cms-analysis/flashggFinalFit.git
