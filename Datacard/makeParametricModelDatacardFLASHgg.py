@@ -84,7 +84,7 @@ parser.add_option("-i","--infilename", help="Input file (binned signal from flas
 parser.add_option("-o","--outfilename",default="cms_hgg_datacard.txt",help="Name of card to print (default: %default)")
 parser.add_option("-p","--procs",default="ggh,vbf,wh,zh,tth",help="String list of procs (default: %default)")
 parser.add_option("-c","--cats",default="UntaggedTag_0,UntaggedTag_1,UntaggedTag_2,UntaggedTag_3,UntaggedTag_4,VBFTag_0,VBFTag_1,VBFTag_2",help="Flashgg Categories (default: %default)")
-parser.add_option("--photonCatScales",default="HighR9EE,LowR9EE,HighR9EB,LowR9EB",help="String list of photon scale nuisance names - WILL NOT correlate across years (default: %default)")
+parser.add_option("--photonCatScales",default="HighR9EE,LowR9EE,HighR9EB,LowR9EB,Gain1EB,Gain6EB",help="String list of photon scale nuisance names - WILL NOT correlate across years (default: %default)")
 parser.add_option("--photonCatScalesCorr",default="MaterialCentral,MaterialForward",help="String list of photon scale nuisance names - WILL correlate across years (default: %default)")
 parser.add_option("--photonCatSmears",default="HighR9EE,LowR9EE,HighR9EBRho,LowR9EBRho,HighR9EBPhi,LowR9EBPhi",help="String list of photon smearing nuisance names - WILL NOT correlate across years (default: %default)")
 parser.add_option("--photonCatSmearsCorr",default="",help="String list of photon smearing nuisance names - WILL correlate across years (default: %default)")
@@ -103,6 +103,7 @@ parser.add_option("--ext",type="string",default="mva",help="file extension")
 parser.add_option("--intLumi",type="float",default=-1.,help="lumi")
 parser.add_option("--differential",action="store_true",dest="differential",help="differential settings")
 parser.add_option("--statonly",action="store_true",dest="statonly",help="ignore systematics")
+parser.add_option("--debugcats",action="store_true",dest="debugcats",help="hack to redefine and debug categories")
 (options,args)=parser.parse_args()
 allSystList=[]
 if options.submitSelf :
@@ -158,6 +159,14 @@ for p in stringProcs.split(','):
 options.procs=listProcs
 options.procs.append('bkg_mass')
 options.toSkip = options.toSkip.split(',')
+f_binsToSkip = open( ("../Signal/outdir_"+str(options.ext)+"/sigfit/binsToSkipInDatacard.txt"), 'r')
+linesToSkip = f_binsToSkip.readlines()
+for line in linesToSkip:
+   thisBin = str(line.split('	')[0])+":"+str(line.split('	')[1].rstrip("\n"))
+   print thisBin
+   options.toSkip.append(thisBin)
+print "###list of bins to be skipped"
+print options.toSkip
 ###############################################################################
 
 ###############################################################################
@@ -305,8 +314,12 @@ def printTheorySysts():
         if (not options.justThisSyst=="") :
           if (not options.justThisSyst=="Theory"): continue
         outFile.write('%-35s  lnN   '%(name))
-        for c in options.cats:
-          for p in options.procs:
+        for ic in range(len(options.cats)):
+          c = options.cats[ic]
+          for ip in range(len(options.procs)):
+            p = options.procs[ip]
+##             if options.debugcats && ip != len(options.procs)-1: ###take diagonals only, except for the last one (Outside acceptance)
+##                p = options.procs[ip]
 ###            if "bkg" in flashggProc[p] : 
             if "bkg" in p : 
               outFile.write('- ')
@@ -672,18 +685,34 @@ if not options.statonly:
    vtxSyst = 0.015 
 
     #photon ID
+   ###flashggSysts['MvaShift'] =  'phoIdMva'
+   ###flashggSysts['LooseMvaSF'] =  'LooseMvaSF'
+   ###flashggSysts['PreselSF']    =  'PreselSF'
+   ###flashggSysts['SigmaEOverEShift'] = 'SigmaEOverEShift'
+   ###flashggSysts['ElectronWeight'] = 'ElectronWeight'
+   ###flashggSysts['electronVetoSF'] = 'electronVetoSF'
+   ###flashggSysts['MuonWeight'] = 'MuonWeight'
+   ###flashggSysts['TriggerWeight'] = 'TriggerWeight'
+   ###flashggSysts['JetBTagWeight'] = 'JetBTagWeight'
+   ####flashggSysts['MvaLinearSyst'] = 'MvaLinearSyst'
+   ####flashggSysts[''] =  ''
+   
    flashggSysts['MvaShift'] =  'phoIdMva'
    flashggSysts['LooseMvaSF'] =  'LooseMvaSF'
    flashggSysts['PreselSF']    =  'PreselSF'
    flashggSysts['SigmaEOverEShift'] = 'SigmaEOverEShift'
-   flashggSysts['ElectronWeight'] = 'ElectronWeight'
+   flashggSysts['ElectronWeight'] = 'eff_e'
    flashggSysts['electronVetoSF'] = 'electronVetoSF'
-   flashggSysts['MuonWeight'] = 'MuonWeight'
+   flashggSysts['MuonWeight'] = 'eff_m'
    flashggSysts['TriggerWeight'] = 'TriggerWeight'
-   flashggSysts['JetBTagWeight'] = 'JetBTagWeight'
+   flashggSysts['JEC'] = 'JEC'
+   flashggSysts['JER'] = 'JER'
+#######   flashggSysts['JetBTagWeight'] = 'eff_b'
    #flashggSysts['MvaLinearSyst'] = 'MvaLinearSyst'
    #flashggSysts[''] =  ''
-   
+
+
+
    #tth Tags
    tthSysts={}
    tthSysts['JEC'] = 'JEC_TTH'
@@ -745,16 +774,22 @@ def interp1Sigma(th1f_nom,th1f_down,th1f_up,factor=1.):
   nomE = th1f_nom.Integral()
   if abs(nomE)< 1.e-6:
     return [1.000,1.000]
-  downE = 1+ factor*((th1f_down.Integral() - nomE) /nomE)
+  down_integral = h1f_down.Integral()
+  if th1f_down.Integral()<0:
+     down_integral=0.
+  up_integral = th1f_up.Integral()
+  if th1f_up.Integral()<0:
+     up_integral=0.
+  downE = 1+ factor*((down_integral - nomE) /nomE)
   print "downE"
   print downE
-  upE = 1+ factor*((th1f_up.Integral() - nomE) /nomE)
+  upE = 1+ factor*((up_integral - nomE) /nomE)
   print "upE"
   print upE
   if options.quadInterpolate!=0:
     print "we do quadInterpolate" 
-    downE = quadInterpolate(-1.,-1.*options.quadInterpolate,0.,1.*options.quadInterpolate,th1f_down.Integral(),th1f_nom.Integral(),th1f_up.Integral())
-    upE = quadInterpolate(1.,-1.*options.quadInterpolate,0.,1.*options.quadInterpolate,th1f_down.Integral(),th1f_nom.Integral(),th1f_up.Integral())
+    downE = quadInterpolate(-1.,-1.*options.quadInterpolate,0.,1.*options.quadInterpolate,down_integral,th1f_nom.Integral(),up_integral)
+    upE = quadInterpolate(1.,-1.*options.quadInterpolate,0.,1.*options.quadInterpolate,down_integral,th1f_nom.Integral(),up_integral)
     if upE != upE:
        print "upE != upE"
        upE=1.000
@@ -766,19 +801,26 @@ def interp1Sigma(th1f_nom,th1f_down,th1f_up,factor=1.):
 def interp1SigmaDataset(d_nom,d_down,d_up,factor=1.):
   nomE = d_nom.sumEntries()
   print "nomE ",nomE
-  if abs(nomE)< 1.e-6:
+###  if abs(nomE)< 1.e-6:
+  if nomE< 1.e-6 or (d_down.sumEntries()<0.) or (d_up.sumEntries()<0.):
     print "nomE < 1.e-6, return [1.0,1.0]"
     return [1.000,1.000]
-  print "d_down.sumEntries() ",d_down.sumEntries()
-  downE = 1+ factor*((d_down.sumEntries() - nomE) /nomE)
+  sumEntr_down = d_down.sumEntries()
+#  if d_down.sumEntries()<0.:
+#     sumEntr_down = 0.
+  sumEntr_up = d_up.sumEntries()
+#  if d_up.sumEntries()<0.:
+#     sumEntr_up = 0.
+#  print "d_down.sumEntries() ",d_down.sumEntries()
+  downE = 1+ factor*((sumEntr_down - nomE) /nomE)
   print "downE ",downE
-  print "d_up.sumEntries() ",d_up.sumEntries()
-  upE = 1+ factor*((d_up.sumEntries() - nomE) /nomE)
+#  print "d_up.sumEntries() ",d_up.sumEntries()
+  upE = 1+ factor*((sumEntr_up - nomE) /nomE)
   print "upE ",upE
   if options.quadInterpolate!=0:
     print "we do quadInterpolate" 
-    downE = quadInterpolate(-1.,-1.*options.quadInterpolate,0.,1.*options.quadInterpolate,d_down.sumEntries(),d_nom.sumEntries(),s_up.sumEntries())
-    upE = quadInterpolate(1.,-1.*options.quadInterpolate,0.,1.*options.quadInterpolate,d_down.sumEntries(),d_nom.sumEntries(),d_up.sumEntries())
+    downE = quadInterpolate(-1.,-1.*options.quadInterpolate,0.,1.*options.quadInterpolate,sumEntr_down,d_nom.sumEntries(),s_up.sumEntries())
+    upE = quadInterpolate(1.,-1.*options.quadInterpolate,0.,1.*options.quadInterpolate,sumEntr_down,d_nom.sumEntries(),sumEntr_up)
     if upE != upE:
        print "upE != upE"
        upE=1.000
@@ -812,7 +854,10 @@ def printFileOptions():
   for typ, info in fileDetails.items():
      print "wiritng shapes into datacard for ",typ, info
      for c in options.cats:
+        file = info[0]
+        print file
         file = info[0].replace('$CAT','%s'%c)
+        print file
         wsname = info[1]
         pdfname = info[2].replace('$CHANNEL','%s'%c)
         if typ not in options.procs and typ!='data_obs': continue
@@ -922,6 +967,7 @@ def getFlashggLine(proc,cat,syst):
   dataUP =  inWS.data("%s_%d_13TeV_%s_%sUp01sigma"%(proc,options.mass,cat,syst))# will exist if teh systematic is an asymetric uncertainty not strore as event weights
   dataNOMINAL =  inWS.data("%s_%d_13TeV_%s"%(proc,options.mass,cat)) #Nominal RooDataSet,. May contain required weights if UP/DOWN/SYMMETRIC roodatahists do not exist (ie systematic stored as event weigths)
 
+  dataNOMINAL.Print()
   if (dataSYMMETRIC==None):
     if( (dataUP==None) or  (dataDOWN==None)) :
       #print "[INFO] Systematic ", syst," stored as asymmetric event weights in RooDataSet"
@@ -975,7 +1021,7 @@ def getFlashggLine(proc,cat,syst):
     dataNOMINAL =  data_nominal  #repalce UP/DOwn histograms defined outside scope of this "if"
 
   systVals = interp1SigmaDataset(dataNOMINAL,dataDOWN,dataUP)
-  flashggSystDump.write('%s nominal: %5.3f up: %5.3f down: %5.3f vals: [%5.3f,%5.3f] \n'%(syst,dataNOMINAL.sumEntries(),dataUP.sumEntries(),dataDOWN.sumEntries(),systVals[0],systVals[1]))
+  flashggSystDump.write('proc: %s, cat: %s, %s nominal: %5.3f up: %5.3f down: %5.3f vals: [%5.3f,%5.3f] \n'%(proc,cat,syst,dataNOMINAL.sumEntries(),dataUP.sumEntries(),dataDOWN.sumEntries(),systVals[0],systVals[1]))
   #print "systvals ", systVals 
   if systVals[0]==1 and systVals[1]==1:
       line = '- '
