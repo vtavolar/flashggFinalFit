@@ -12,20 +12,29 @@ WSTFileWrapper::WSTFileWrapper( std::string files, std::string wsname ) {
   }
 
   for ( std::vector<std::string>::iterator fn = fnList.begin() ; fn != fnList.end() ; fn++ ) {
-    fileList.push_back(TFile::Open(fn->c_str()));
+    TFile * fin = TFile::Open(fn->c_str());
+    fileList.push_back(fin);
     if (fileList.back() == 0) {
-      std::cout << "[WSTFileWrapper] got 0 for what should be this file: " << (*fn) << std::endl;
+      std::cerr << "[WSTFileWrapper] got 0 for what should be this file: " << (*fn) << std::endl;
     } else if (fileList.back()->IsZombie()) {
-      std::cout << "[WSTFileWrapper] got that this file is a zombie: " << (*fn) << std::endl;
+      std::cerr << "[WSTFileWrapper] got that this file is a zombie: " << (*fn) << std::endl;
     } else {
-      std::cout << "[WSTFileWrapper] successfully opened this file: " << (*fn) << std::endl;
+      std::cerr << "[WSTFileWrapper] successfully opened this file: " << (*fn) << std::endl;
     }
-    wsList.push_back((RooWorkspace*)fileList.back()->Get(wsname.c_str()));
-    if (wsList.back() == 0) {
-      std::cout << "[WSTFileWrapper] on file " << (*fn) << " failed to obtain workspace named: " << wsname << std::endl;
+    std::cerr << "[WSTFileWrapper] here "  << std::endl;
+    RooWorkspace * ws = (RooWorkspace*)fin->Get(wsname.c_str());
+    std::cerr << "[WSTFileWrapper] here 2 " << ws  << std::endl;
+    
+    if (ws  == 0) {
+      std::cerr << "[WSTFileWrapper] on file " << (*fn) << " failed to obtain workspace named: " << wsname << std::endl;
     } else {
-      std::cout << "[WSTFileWrapper] on file " << (*fn) << " opened workspace named: " << wsname << std::endl;
+      std::cerr << "[WSTFileWrapper] on file " << (*fn) << " opened workspace named: " << wsname << std::endl;
     }
+    
+    std::cerr << "[WSTFileWrapper] here 3 "  << std::endl;
+    wsList.push_back(ws);
+    
+    std::cerr << "[WSTFileWrapper] here 4 "  << std::endl;
   }
 }
 
