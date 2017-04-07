@@ -40,7 +40,7 @@ template<class ResultT, class SourceT, class PredicateT> typename ResultT::itera
 	return dst.begin()+orig_size;
 }
 
-FinalModelConstruction::FinalModelConstruction(RooRealVar *massVar, RooRealVar *MHvar,  RooRealVar *MHrefvar,RooRealVar *intL, int mhLow, int mhHigh, string proc, string cat, bool doSecMods, string systematicsFileName, vector<int> skipMasses, int verbosity,std::vector<std::string> procList, std::vector<std::string> flashggCats , string outDir, bool isProblemCategory ,bool isCB, int sqrts, bool quadraticSigmaSum)	:
+FinalModelConstruction::FinalModelConstruction(RooRealVar *massVar, RooRealVar *MHvar,  RooRealVar *MHrefvar,RooRealVar *intL, int mhLow, int mhHigh, string proc, string cat, bool doSecMods, string systematicsFileName, vector<int> skipMasses, int verbosity,std::vector<std::string> procList, std::vector<std::string> flashggCats , string outDir, bool isProblemCategory , bool isToSkip, bool isCB, int sqrts, bool quadraticSigmaSum)	:
   mass(massVar),
   MH(MHvar),
   MHref(MHrefvar),
@@ -51,6 +51,7 @@ FinalModelConstruction::FinalModelConstruction(RooRealVar *massVar, RooRealVar *
   cat_(cat),
   outDir_(outDir),
   isProblemCategory_(isProblemCategory),
+  isToSkip_(isToSkip),
   doSecondaryModels(doSecMods),
   isCutBased_(isCB),
 	sqrts_(sqrts),
@@ -1185,7 +1186,7 @@ void FinalModelConstruction::getNormalization(){
 	if (intLumi) {
     // calcu eA as sumEntries / totalxs * totalbr * intL
     float sumEntries = data->sumEntries(); 
-    if (sumEntries <0 ) {
+    if (sumEntries <0 || isToSkip_ ) {
     sumEntries =0; //negative eff*acc makes no sense...
     fitToConstant=1;
     }
