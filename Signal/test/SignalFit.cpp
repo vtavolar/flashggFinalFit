@@ -49,8 +49,8 @@ string datfilename_;
 string systfilename_;
 string plotDir_;
 bool skipPlots_=false;
-int mhLow_=115;
-int mhHigh_=135;
+int mhLow_=110;
+int mhHigh_=140;
 int nCats_;
 float constraintValue_;
 int constraintValueMass_;
@@ -158,8 +158,8 @@ string optReferenceTagWV_ = "";
 // set range to be the same as FTest
 // want quite a large range otherwise don't
 // see crazy bins on the sides
-float rangeLow = 115;   // make this configurable and in Ftest too
-float rangeHigh = 135;
+float rangeLow = 110;   // make this configurable and in Ftest too
+float rangeHigh = 140;
 
 
 void OptionParser(int argc, char *argv[]){
@@ -173,11 +173,11 @@ void OptionParser(int argc, char *argv[]){
 		("systfilename,s", po::value<string>(&systfilename_)->default_value(""),		"Systematic model numbers")
 		("plotDir,p", po::value<string>(&plotDir_)->default_value("plots"),						"Put plots in this directory")
 		("skipPlots", 																																									"Do not make any plots")
-	  ("mhLow,L", po::value<int>(&mhLow_)->default_value(115),                                  			"Low mass point")
+	  ("mhLow,L", po::value<int>(&mhLow_)->default_value(110),                                  			"Low mass point")
 	  ("mcBeamSpotWidth", po::value<float>(&mcBeamSpotWidth_)->default_value(5.14),                                  "Default width of MC beamspot")
 	  ("dataBeamSpotWidth", po::value<float>(&dataBeamSpotWidth_)->default_value(3.50),                                  "Default width of data beamspot")
 		("nThreads,t", po::value<int>(&ncpu_)->default_value(ncpu_),                               			"Number of threads to be used for the fits")
-		("mhHigh,H", po::value<int>(&mhHigh_)->default_value(135),                                			"High mass point")
+		("mhHigh,H", po::value<int>(&mhHigh_)->default_value(140),                                			"High mass point")
 		// ("nCats,n", po::value<int>(&nCats_)->default_value(9),                                    			"Number of total categories")
 		("constraintValue,C", po::value<float>(&constraintValue_)->default_value(0.1),            			"Constraint value")
 		("constraintValueMass,M", po::value<int>(&constraintValueMass_)->default_value(125),                        "Constraint value mass")
@@ -393,7 +393,7 @@ RooDataSet * rvwvDataset(RooDataSet *data0, string rvwv){
   
   RooDataSet *dataRV = (RooDataSet*) data0->emptyClone()->reduce(RooArgSet(*mass_, *dZ_));
   RooDataSet *dataWV = (RooDataSet*) data0->emptyClone()->reduce(RooArgSet(*mass_, *dZ_));
-	RooRealVar *weight0 = new RooRealVar("weight","weight",-100000,1000000);
+  RooRealVar *weight0 = new RooRealVar("weight","weight",-100000,1000000);
   for (unsigned int i=0 ; i < data0->numEntries() ; i++){
     if (data0->get(i)->getRealValue("CMS_hgg_mass") > rangeLow && data0->get(i)->getRealValue("CMS_hgg_mass") < rangeHigh ){
       mass_->setVal(data0->get(i)->getRealValue("CMS_hgg_mass"));
@@ -422,6 +422,7 @@ RooDataSet * beamSpotReweigh(RooDataSet *data0 /*original dataset*/){
   RooRealVar *weight0 = new RooRealVar("weight","weight",-100000,1000000);
   data0->Print();
   plotBeamSpotDZdist(data0,"before");
+  data0->Print();
   for (int i = 0; i < data0->numEntries(); i++) {
     mass_->setVal(data0->get(i)->getRealValue("CMS_hgg_mass"));
     dZ_->setVal(data0->get(i)->getRealValue("dZ"));
@@ -441,7 +442,9 @@ RooDataSet * beamSpotReweigh(RooDataSet *data0 /*original dataset*/){
   }
   data->Print();
   plotBeamSpotDZdist(data,"after");
-  
+  std::cout<<"data after BS reweighting"<<std::endl;
+  data->Print();  
+
   if (verbose_) std::cout << "[INFO] Old dataset (before beamSpot  reweight): " << *data0 << std::endl;
   if (verbose_) std::cout << "[INFO] New dataset (after beamSpot reweight):  " << *data << std::endl;
   
@@ -483,6 +486,8 @@ bool skipMass(int mh){
 int main(int argc, char *argv[]){
 
   int   minNevts    = 500; // if below minNevts #gauss = -1  //deflaut is ggh UntaggedTag3
+
+  double  minConditions = 60.0; //(1 - suwNegW/datasetW)*numEntries : if below, the dataset is too unstable (due to neg weights) to be fitted, replace with empty one
 
   // Bins for fitting
   int nBinsFit_ = 160; //  //deflaut is ggh UntaggedTag3MDDB make it a parameter
@@ -819,7 +824,12 @@ int main(int argc, char *argv[]){
 	  std::cout << "bin from proc and name do not match, so this is an off-diagonal process!" << std::endl;
 	}
       }
-	
+      
+      //do not shift OutsideAcceptance data, they are not off-diagonal
+      if(proc.find("OutsideAcceptance") != std::string::npos ){
+	shiftOffDiag_ = false;
+      }
+
       if (verbose_) std::cout << " [INFO] check if this proc " << proc << " matches splitProc " << splitProc << ": "<< (proc.compare(splitProc)==0) << std::endl; 
       if ( proc.compare(splitProc) == 0 ) {
         if (verbose_) std::cout << " [INFO] --> proc matches! Check if this cat " << cat  << " matches splitCat " << splitCat<< ": " << (cat.compare(splitCat)==0) <<  std::endl; 
@@ -852,6 +862,7 @@ int main(int argc, char *argv[]){
     map<int,RooDataSet*> datasets; // not used ?
     
     bool isProblemCategory =false;
+    bool isToSkip =false;
 
 
     //these flags make sure the replacement happens for all mass points if only one falls below threshold
@@ -859,6 +870,11 @@ int main(int argc, char *argv[]){
     bool tooFewEntriesWV=false;
     bool negSumEntriesRV=false;
     bool negSumEntriesWV=false;
+
+    bool belowMinConditionsRV=false;
+    bool belowMinConditionsWV=false;
+
+    double WVoverRVat125 = 0.;
 
     for (int mh=mhLow_; mh<=mhHigh_; mh+=5){
       std::cout << "First, check if at least at one of the mass points the number of entries is too low"<<std::endl;
@@ -891,6 +907,56 @@ int main(int argc, char *argv[]){
       std::cout << "WV numEntries " << nEntriesWV << std::endl;
       float sEntriesWV= dataWV->sumEntries(); // count the number of entries and total weight on the RV/WV datasets
       std::cout << "WV sumEntries " << sEntriesWV << std::endl;
+
+      //find problematic categories
+      if(mh==125){
+	if(sEntriesWV !=0){
+	  WVoverRVat125=sEntriesWV/sEntriesRV;
+	}
+	else{
+	  WVoverRVat125=0.;
+	}
+	std::cout<<"mh is "<<mh<<std::endl;
+	std::cout<<"fitlering categories to be skipped"<<std::endl;
+	double sumWpos=0.;
+	double sumWneg=0.;
+	for(int ientry = 0; ientry < nEntriesRV; ientry++){
+	  dataRV->get(ientry);
+	  if(dataRV->weight()>0.){
+	    sumWpos += dataRV->weight();
+	  }
+	  else{
+	    sumWneg += dataRV->weight();
+	  }
+	}
+	double fracNeg=0.;
+	if(sumWpos - sumWneg != 0.){
+	  fracNeg = sumWneg/(sumWpos - sumWneg);
+	}
+	if( (1-abs(fracNeg))*nEntriesRV < minConditions ){
+	  belowMinConditionsRV=true;
+	}
+	std::cout<<"conditions for fit : "<< (1-abs(fracNeg))*nEntriesRV <<", it falls below min?  "<<belowMinConditionsRV<<std::endl;
+	
+	
+	sumWpos=0.;
+	sumWneg=0.;
+	for(int ientry = 0; ientry < nEntriesWV; ientry++){
+	  dataWV->get(ientry);
+	  if(dataWV->weight()>0.){
+	    sumWpos += dataWV->weight();
+	  }
+	  else{
+	    sumWneg += dataWV->weight();
+	  }
+	}
+	fracNeg=0.;
+	if(sumWpos - sumWneg != 0.){
+	  fracNeg = sumWneg/(sumWpos - sumWneg);
+	}
+	if( (1-abs(fracNeg))*sEntriesWV < minConditions ) belowMinConditionsWV=true;
+      }
+      
       if(nEntriesRV < minNevts) tooFewEntriesRV=true;
       if(sEntriesRV < 0) negSumEntriesRV=true;
       if(nEntriesWV < minNevts) tooFewEntriesWV=true;
@@ -900,8 +966,8 @@ int main(int argc, char *argv[]){
       std::cout<<"negSumEntriesRV "<<negSumEntriesRV<<std::endl;
       std::cout<<"tooFewEntriesWV "<<tooFewEntriesWV<<std::endl;
       std::cout<<"negSumEntriesWV "<<negSumEntriesWV<<std::endl;
-   }
-
+    }
+    
 
 
 
@@ -928,7 +994,11 @@ int main(int argc, char *argv[]){
 
       dataRV = rvwvDataset(data,"RV"); 
       dataWV = rvwvDataset(data,"WV"); 
-      
+
+      if(negSumEntriesWV){
+	dataWV = (RooDataSet*) dataWV->emptyClone()->reduce(RooArgSet(*mass_, *dZ_));
+      }
+
       // // BASIC CHECK
       // if (mh == 125) {
       // 	for (unsigned int i=0 ; i < dataRV->numEntries() ; i++){	
@@ -958,9 +1028,10 @@ int main(int argc, char *argv[]){
       // or if it was specified that one should use the replacement dataset, then need to replace!
       //      if (nEntriesRV <   minNevts  || sEntriesRV < 0 || ( userSkipRV) || offDiagonal ){
       //      if (tooFewEntriesRV  || negSumEntriesRV || ( userSkipRV) || offDiagonal ){ //the flags for entries make sure the replacement happens for all mass points if only one falls below threshold
-      if (tooFewEntriesRV  || negSumEntriesRV || ( userSkipRV) ){ //the flags for entries make sure the replacement happens for all mass points if only one falls below threshold
+      if (tooFewEntriesRV  || negSumEntriesRV || belowMinConditionsRV  || ( userSkipRV) ){ //the flags for entries make sure the replacement happens for all mass points if only one falls below threshold
 	std::cout << "[INFO] too few entries to use for fits in RV! nEntries " << nEntriesRV << " sumEntries " << sEntriesRV << " userSkipRV " << userSkipRV<< std::endl;
 	isProblemCategory=true;        
+	if( belowMinConditionsRV ) isToSkip=true;
 	std::cout<<"proc, cat: "<<proc<<", "<<cat<<std::endl;
 	int thisProcCatIndex = getIndexOfReferenceDataset(proc,cat);
           
@@ -1020,6 +1091,9 @@ int main(int argc, char *argv[]){
 	////VRT, 3.6.2016: for differentials, it's probably better to have a WV reference for each group of sigmaM/M cats, thus we use ad hoc replacementcat/proc instead of references
 	int thisProcCatIndex = getIndexOfReferenceDataset(proc,cat);
 	//
+	std::cout<<"found proccat index "<<thisProcCatIndex<<std::endl;
+	std::cout<<"size of repl proc map wv "<<map_replacement_proc_wv_.size()<<std::endl;
+	std::cout<<"size of repl cat map wv "<<map_replacement_cat_wv_.size()<<std::endl;
 	string replancementProc = map_replacement_proc_wv_[thisProcCatIndex];
 	string replancementCat = map_replacement_cat_wv_[thisProcCatIndex];
 	int replacementIndex = getIndexOfReferenceDataset(replancementProc,replancementCat);
@@ -1033,7 +1107,8 @@ int main(int argc, char *argv[]){
 				       rvwvDataset(
 						   intLumiReweigh(
 								  reduceDataset(
-										(RooDataSet*)inWS->data(Form("%s_%d_13TeV_%s",referenceProcWV_.c_str(),mh,referenceTagWV_.c_str()))
+										//	(RooDataSet*)inWS->data(Form("%s_%d_13TeV_%s",referenceProcWV_.c_str(),mh,referenceTagWV_.c_str()))
+										(RooDataSet*)inWS->data(Form("%s_%d_13TeV_%s",replancementProc.c_str(),mh,replancementCat.c_str()))
 										)
 								  ), "WV"
 						   )
@@ -1042,7 +1117,8 @@ int main(int argc, char *argv[]){
 	  data0Ref   = rvwvDataset(
 				   intLumiReweigh(
 						  reduceDataset(
-								(RooDataSet*)inWS->data(Form("%s_%d_13TeV_%s",referenceProcWV_.c_str(),mh,referenceTagWV_.c_str()))
+								//(RooDataSet*)inWS->data(Form("%s_%d_13TeV_%s",referenceProcWV_.c_str(),mh,referenceTagWV_.c_str()))
+								(RooDataSet*)inWS->data(Form("%s_%d_13TeV_%s",replancementProc.c_str(),mh,replancementCat.c_str()))
 								)
 						  ), "WV"
 				   );
@@ -1180,7 +1256,8 @@ int main(int argc, char *argv[]){
 	if(!userSkipWV){
 	  initFitWV.runFits(ncpu_);
 	}
-	if(( userSkipWV || offDiagonal) && shiftOffDiag_){
+	if(( userSkipWV || offDiagonal) && shiftOffDiag_ && WVoverRVat125 >0.07){
+	  std::cout << "WV/RV ratio at 125 "<< WVoverRVat125 << std::endl;
 	  std::cout << "userSkipWV is " << userSkipWV <<" and offDiagonal is " << offDiagonal <<", so after fitting we shift dm by the scale bias" << std::endl;
 	  initFitWV.shiftScale();	
 	}
@@ -1235,7 +1312,7 @@ int main(int argc, char *argv[]){
 	  MHref->setConstant(true);
 	}
 	std::cout << "Syst file name in SignalFit.cpp "<<systfilename_<<std::endl; 
-        FinalModelConstruction finalModel(mass_,MH,MHref,intLumi_,mhLow_,mhHigh_,proc,cat,doSecondaryModels_,systfilename_,skipMasses_,verbose_,procs_, flashggCats_,plotDir_, isProblemCategory,isCutBased_,sqrts_,doQuadraticSigmaSum_);
+        FinalModelConstruction finalModel(mass_,MH,MHref,intLumi_,mhLow_,mhHigh_,proc,cat,doSecondaryModels_,systfilename_,skipMasses_,verbose_,procs_, flashggCats_,plotDir_, isProblemCategory, isToSkip, isCutBased_,sqrts_,doQuadraticSigmaSum_);
 	
         finalModel.setSecondaryModelVars(MH_SM,DeltaM,MH_2,higgsDecayWidth);
         finalModel.setRVsplines(splinesRV);
