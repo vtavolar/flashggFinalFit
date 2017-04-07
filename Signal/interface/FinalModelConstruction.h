@@ -26,7 +26,7 @@ class FinalModelConstruction {
 
   public:
     
-    FinalModelConstruction(RooRealVar *massVar, RooRealVar *MHvar, RooRealVar *MHrefvar, RooRealVar *intL, int mhLow, int mhHigh, std::string proc, std::string cat, bool doSecMods, std::string systematicsFileName, std::vector<int> skipMasses, int verbosity, std::vector<std::string> procsList, std::vector<std::string> flashggCats , string outDir, bool isProblemCategory,bool isCB=false, int sqrts=13, bool quadraticSigmaSum=false);
+  FinalModelConstruction(RooRealVar *massVar, RooRealVar *MHvar, RooRealVar *MHrefvar, RooRealVar *intL, int mhLow, int mhHigh, std::string proc, std::string cat, bool doSecMods, std::string systematicsFileName, std::vector<int> skipMasses, int verbosity, std::vector<std::string> procsList, std::vector<std::string> flashggCats , string outDir, bool isProblemCategory, bool isToSkip, bool isCB=false, int sqrts=13, bool quadraticSigmaSum=false);
     ~FinalModelConstruction();
 
 		void loadSignalSystematics(std::string filename);
@@ -78,6 +78,7 @@ class FinalModelConstruction {
     std::string outDir_;
     int nIncCats_;
     bool isProblemCategory_;
+    bool isToSkip_;
     bool doSecondaryModels;
     bool secondaryModelVarsSet;
     bool isCutBased_;
