@@ -217,6 +217,7 @@ def drawGlobals(canv,shifted=False):
    #lat.SetTextSize(0.07)
    #lat.DrawLatex(0.173+0.05,0.85,"#splitline{#bf{CMS}}{#it{Preliminary}}")
    lat.DrawLatex(0.129+0.085,0.93,"#bf{CMS} #scale[0.75]{#it{Preliminary}}")
+   lat.DrawLatex(0.59,0.93,"35.9 fb^{-1} (13 TeV)")
    lat.DrawLatex(0.129+0.085+0.04,0.85,"H#rightarrow#gamma#gamma")
    lat.SetTextSize(0.045)
    lat.DrawLatex(0.62,0.93,options.text)
@@ -227,7 +228,8 @@ def drawGlobals(canv,shifted=False):
    #lat.DrawLatex(0.129,0.93,"CMS H#rightarrow#gamma#gamma")
    #lat.DrawLatex(0.173,0.85,"#splitline{#bf{CMS}}{#it{Preliminary}}")
    lat.DrawLatex(0.129,0.93,"#bf{CMS} #scale[0.75]{#it{Preliminary}}")
-   lat.DrawLatex(0.129+0.04,0.85,"H#rightarrow#gamma#gamma, profiling m_{H}")
+   lat.DrawLatex(0.59,0.93,"35.9 fb^{-1} (13 TeV)")
+   lat.DrawLatex(0.129+0.30,0.85,"H#rightarrow#gamma#gamma, profiling m_{H}")
    #lat.SetTextSize(0.07)
    lat.SetTextSize(0.045)
    lat.DrawLatex(0.60,0.933,options.text)
@@ -782,6 +784,7 @@ def plot1DNLL(returnErrors=False,xvar="", ext=""):
     ntitle = options.names[k]
     tf = r.TFile(f)
     tree = tf.Get('limit')
+    tree.Print()
     gr = r.TGraph()
     gr.SetName('gr_%d_%s'%(k,x))
     gr.SetLineColor((options.colors[k]))
@@ -790,6 +793,7 @@ def plot1DNLL(returnErrors=False,xvar="", ext=""):
     leg.AddEntry(gr,options.names[k],'L')
     
     res=[]
+    print x
     xFormula = r.TTreeFormula('x',x,tree)
     for i in range(tree.GetEntries()):
       tree.GetEntry(i)
@@ -898,13 +902,14 @@ def plot1DNLL(returnErrors=False,xvar="", ext=""):
         print "opts xaxis ", options.xaxis
         axmin = float(options.xaxis[0])
         axmax = float(options.xaxis[1])
-      lines = [r.TLine(axmin, 1, axmax, 1), r.TLine(xmin-eminus,  0, xmin-eminus,  1), r.TLine(xmin+eplus,  0, xmin+eplus,  1), 
-              r.TLine(axmin, 4, axmax, 4), r.TLine(xmin-eminus2, 0, xmin-eminus2, 4), r.TLine(xmin+eplus2, 0, xmin+eplus2, 4) ]
+      lines = [r.TLine(axmin, 1, axmax, 1), r.TLine(xmin-eminus,  0, xmin-eminus,  1), r.TLine(xmin+eplus,  0, xmin+eplus,  1)]###, 
+      ###        r.TLine(axmin, 4, axmax, 4), r.TLine(xmin-eminus2, 0, xmin-eminus2, 4), r.TLine(xmin+eplus2, 0, xmin+eplus2, 4) ]
     
   dH = r.TH1D("dH","",1,axmin,axmax)
   dH.GetXaxis().SetTitle(xtitle)
   if options.method=='mh': dH.GetXaxis().SetNdivisions(505)
   dH.GetYaxis().SetTitle('-2 #Delta ln L')
+#  dH.GetYaxis().SetTitle('#Delta q')
   if not options.yaxis: dH.GetYaxis().SetRangeUser(0.,6)
   else: dH.GetYaxis().SetRangeUser(float(options.yaxis.split(',')[0]),float(options.yaxis.split(',')[1]))
   dH.SetLineColor(0)
@@ -915,7 +920,7 @@ def plot1DNLL(returnErrors=False,xvar="", ext=""):
     gr.GetXaxis().SetRangeUser(axmin,axmax)
     if not options.yaxis: gr.GetYaxis().SetRangeUser(0.,6)
     else: gr.GetYaxis().SetRangeUser(float(options.yaxis.split(',')[0]),float(options.yaxis.split(',')[1]))
-    gr.Draw("L")
+    gr.Draw("C")
 
   gXS = getXSgraph()
   xXS = gXS.GetX()
@@ -935,20 +940,35 @@ def plot1DNLL(returnErrors=False,xvar="", ext=""):
 #      print yXS[xmass]
 #      print eupyXS[xmass]
 #      print edownyXS[xmass]
-      xsecSM      =      yXS[xmass]
-      xsecSMeup   =      eupyXS[xmass]
-      xsecSMedown =      edownyXS[xmass]
+      xsecSM      =      yXS[xmass]*0.59724597835
+      print "XSEC SM ",xsecSM
+      xsecSMeup   =    math.sqrt(  (eupyXS[xmass]*0.59724597835   )**2 + (0.01*xsecSM)**2 )
+      xsecSMedown =    math.sqrt(  (edownyXS[xmass]*0.59724597835 )**2 + (0.01*xsecSM)**2 )
+      print "XSEC err up",xsecSMeup
+      print "XSEC err down",xsecSMedown
   from ROOT import TBox
-  bSM = TBox(xsecSM-xsecSMedown, dH.GetYaxis().GetXmin(), xsecSM+xsecSMeup, 6.)
+  bSM = TBox(xsecSM-xsecSMedown, dH.GetYaxis().GetXmin(), xsecSM+xsecSMeup, 2.5)
   bSM.SetFillColor(r.kRed)
   bSM.SetFillStyle(3245)
   r.gStyle.SetHatchesSpacing(0.9)
   bSM.Draw('same')
   from ROOT import TLine
-  bSMcentral = TLine(xsecSM, dH.GetYaxis().GetXmin(), xsecSM, 6.)
+  bSMcentral = TLine(xsecSM, dH.GetYaxis().GetXmin(), xsecSM, 2.5)
   bSMcentral.SetLineColor(r.kRed)
   bSMcentral.SetLineWidth(2)
   bSMcentral.Draw('same')
+
+  xsecSM=xsecSM*1.0
+  bSM2 = TBox(xsecSM-xsecSMedown, dH.GetYaxis().GetXmin(), xsecSM+xsecSMeup, 6.)
+  bSM2.SetFillColor(r.kGreen)
+  bSM2.SetFillStyle(3345)
+  r.gStyle.SetHatchesSpacing(0.99)
+###  bSM2.Draw('same')
+  from ROOT import TLine
+  bSM2central = TLine(xsecSM, dH.GetYaxis().GetXmin(), xsecSM, 6.)
+  bSM2central.SetLineColor(r.kGreen)
+  bSM2central.SetLineWidth(2)
+###  bSM2central.Draw('same')
 
   
   # draw legend
@@ -972,20 +992,38 @@ def plot1DNLL(returnErrors=False,xvar="", ext=""):
     lat2.SetTextSize(0.045)
     lat2.SetTextAlign(11)
 #    lat2.DrawLatex(0.17,0.78,"#hat{#mu} = %4.2f ^{#font[122]{+}%4.2f}_{#font[122]{-}%4.2f}"%(fit,eplus0,eminus0))
-    lat2.DrawLatex(0.17,0.78,"#hat{#sigma}_{fid} = %4.0f ^{#font[122]{+}%4.0f}_{#font[122]{-}%4.0f} fb"%(fit,eplus0,eminus0))
-    lat2.DrawLatex(0.24,0.73,"#scale[0.8]{HXSWG YR4}")
-    lat2.DrawLatex(0.24,0.70,"#scale[0.8]{+ aMC@NLO}")
-    lat2.DrawLatex(0.24,0.672,"#scale[0.7]{m_{H}=125.09 GeV}")
+    lat2.DrawLatex(0.43,0.78,"#hat{#sigma}_{fid} = %4.0f ^{#font[122]{+}%4.0f}_{#font[122]{-}%4.0f} fb"%(fit,eplus0,eminus0))
+###    lat2.DrawLatex(0.17,0.78,"#hat{#sigma}_{fid} = %4.1f ^{#font[122]{+}%4.1f}_{#font[122]{-}%4.1f}"%(fit,eplus0,eminus0))
+    lat2.DrawLatex(0.45,0.70,"#scale[0.9]{HXSWG YR4}")
+    lat2.DrawLatex(0.5,0.655,"#scale[0.8]{+ aMC@NLO}")
+    lat2.DrawLatex(0.5,0.627,"#scale[0.7]{m_{H}=125.09 GeV}")
 
-    bSMleg = TBox(33., 4.48, 37., 4.74)
+    bSMleg = TBox(81.1, 1.62, 83.1, 1.74)
     bSMleg.SetFillColor(r.kRed)
     bSMleg.SetFillStyle(3245)
     r.gStyle.SetHatchesSpacing(0.9)
     bSMleg.Draw('same')
-    bSMlegcentral = TLine(33., 4.61, 37., 4.61)
+    bSMlegcentral = TLine(81.1, 1.68, 83.1, 1.68)
     bSMlegcentral.SetLineColor(r.kRed)
     bSMlegcentral.SetLineWidth(2)
     bSMlegcentral.Draw('same')
+
+
+#    lat2.DrawLatex(0.5,0.65,"#scale[0.8]{HXSWG YR4}")
+###    lat2.DrawLatex(0.5,0.63,"#scale[0.8]{+ POWHEG}")
+###    lat2.DrawLatex(0.5,0.602,"#scale[0.7]{m_{H}=125.09 GeV}")
+
+    bSMleg2 = TBox(92.8, 3.80, 95.8, 4.06)
+    bSMleg2.SetFillColor(r.kGreen)
+    bSMleg2.SetFillStyle(3245)
+    r.gStyle.SetHatchesSpacing(0.9)
+###    bSMleg2.Draw('same')
+    bSMlegcentral2 = TLine(92.8, 3.93, 95.8, 3.93)
+    bSMlegcentral2.SetLineColor(r.kGreen)
+    bSMlegcentral2.SetLineWidth(2)
+###    bSMlegcentral2.Draw('same')
+
+
   elif options.method=='rv': lat2.DrawLatex(0.5,0.85,"#hat{#mu}_{qqH+VH} = %4.2f ^{#font[122]{+}%4.2f}_{#font[122]{-}%4.2f}"%(fit,eplus0,eminus0))
   elif options.method=='rf': lat2.DrawLatex(0.5,0.85,"#hat{#mu}_{ggH+ttH} = %4.2f ^{#font[122]{+}%4.2f}_{#font[122]{-}%4.2f}"%(fit,eplus0,eminus0))
 
@@ -1891,14 +1929,14 @@ def run():
   if options.method=='pval' or options.method=='limit' or options.method=='maxlh':
     runStandard()
   elif options.method=='mh' or options.method=='mu' or options.method=='rv' or options.method=='rf' or options.method=='mpdfchcomp' or options.method=='mpdfmaxlh':
-    path = os.path.expandvars('$CMSSW_BASE/src/flashggFinalFit/Plots/FinalResults/rootPalette.C')
-    if not os.path.exists(path):
-      sys.exit('ERROR - Can\'t find path: '+path) 
-    r.gROOT.ProcessLine(".x "+path)
-    path = os.path.expandvars('$CMSSW_BASE/src/flashggFinalFit/Plots/FinalResults/ResultScripts/GraphToTF1.C')
-    if not os.path.exists(path):
-      sys.exit('ERROR - Can\'t find path: '+path) 
-    r.gROOT.LoadMacro(path)
+###    path = os.path.expandvars('$CMSSW_BASE/src/flashggFinalFit/Plots/FinalResults/rootPalette.C')
+###    if not os.path.exists(path):
+###      sys.exit('ERROR - Can\'t find path: '+path) 
+###    r.gROOT.ProcessLine(".x "+path)
+###    path = os.path.expandvars('$CMSSW_BASE/src/flashggFinalFit/Plots/FinalResults/ResultScripts/GraphToTF1.C')
+###    if not os.path.exists(path):
+###      sys.exit('ERROR - Can\'t find path: '+path) 
+###    r.gROOT.LoadMacro(path)
     if options.method=='mpdfchcomp':
       plotMPdfChComp()
     elif options.method=='mpdfmaxlh':
