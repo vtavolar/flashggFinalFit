@@ -111,6 +111,7 @@ class WSTFileWrapper:
     for fn in self.fnList: # [2]
         f = r.TFile.Open(fn) 
         self.fileList.append(f)
+        print "wsname ",wsname
         thing = f.Get(wsname)
         self.wsList.append(self.fileList[-1].Get(wsname))
         f.Close()
@@ -133,6 +134,9 @@ class WSTFileWrapper:
         result = None
         complained_yet =0 
         for i in range(len(self.fnList)):
+          print self.wsList[i]
+          print self.wsList[i].GetName()
+          self.wsList[i].Print()
           this_result_obj = self.wsList[i].var(varName);
           if this_result_obj: # [3]
              result = this_result_obj
@@ -184,6 +188,7 @@ def preFlight(f):
 def getSigHistos(ws, procs, suffix): #ok so they are not histos anymore but roodatasets
     mass = ws.var("CMS_hgg_mass")
     for name in procs:
+      print name+suffix 
       ws.data(name+suffix).Print()
     slurpDic = { name : ws.data(name+suffix) for name in procs}
     # filter out histos that are null pointers
@@ -207,14 +212,17 @@ Masses = range(120,135,5)
 # -------------------------------------------------------------
 
 #procs=["ggh","vbf","wh","zh","tth"]
-procs=['InsideAcceptance', 'OutsideAcceptance']
+procs=['InsideAcceptance_genNjets2p5_m0p5to100p0', 'OutsideAcceptance']
 masses=[120.,125.,130.]
 #cats=["UntaggedTag_0","UntaggedTag_1","UntaggedTag_2","UntaggedTag_3","VBFTag_0","VBFTag_1","TTHLeptonicTag","TTHHadronicTag"]
-cats=["SigmaMpTTag_0","SigmaMpTTag_1","SigmaMpTTag_2"]
+cats=["SigmaMpTTag_0_recoNjets2p5_m0p5to100p0","SigmaMpTTag_1_recoNjets2p5_m0p5to100p0","SigmaMpTTag_2_recoNjets2p5_m0p5to100p0"]
 sqrts = 13
-ws = WSTFileWrapper(sys.argv[1],"tagsDumper/cms_hgg_%sTeV"%sqrts)
+###ws = WSTFileWrapper(sys.argv[1],"tagsDumper/cms_hgg_%sTeV"%sqrts)
+ws = WSTFileWrapper(sys.argv[1],"cms_hgg_%sTeV"%sqrts)
 extraFile=sys.argv[2]
-lRRV = ws.var("IntLumi")
+##lRRV = ws.var("IntLumi")
+lRRV =  r.RooRealVar("IntLumi","IntLumi", 1000.0)
+lRRV.setConstant()
 lumi = lRRV.getVal()
 norm.Init(int(sqrts))
 
@@ -272,7 +280,12 @@ for point,M in enumerate(Masses):
     printLine+="%3.5f "%h.sumEntries()
   printLine+="tot=%3.5f"%Sum
   
-  xsecs = [ GetProcXsection(M,proc)*adHocFactors[proc] for proc in procs ]
+
+  xsecs=[]   
+  for proc in procs:   
+     if "InsideAcceptance" in proc:
+        proc = "InsideAcceptance"
+     xsecs.append( GetProcXsection(M,proc)*adHocFactors[proc]  )
   sm = GetBR(M) * sum(xsecs)
   
   effAcc = 100*Sum/(sm*lumi) # calculate Efficiency at mH
