@@ -1,0 +1,2 @@
+#combine -v 0  -M MultiDimFit --toysFile higgsCombineasimov_toy.GenerateOnly.mH125.123456.root -t -1  -m 125  --minimizerStrategy 2 --minimizerTolerance=1.0 --algo=grid --points $4 $1 -n $2 -P $3 --floatOtherPOIs=1
+combine -v 0  -M MultiDimFit  --minimizerStrategy 2  --algo=grid --snapshotName MultiDimFit --points $4 $1 -n $2 -P $3 --floatOtherPOIs=1 ${5} ###  --squareDistPoiStep--setPhysicsModelParameterRanges="r1=1.0,2.5:r6=1.0,2.5" # --skipInitialFit --autoRange 2.5
