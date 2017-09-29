@@ -45,7 +45,7 @@ private:
     std::vector<RooDataSet * > datasets_;
     TNtuple * tree_;
     std::vector<float> treeBuf_;
-
+    bool isData_;
 };
 
 #include <list>

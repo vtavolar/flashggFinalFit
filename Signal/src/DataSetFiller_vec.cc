@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <iomanip>
+#include <ios>
 #include <sstream>
 using namespace std;
 
@@ -55,6 +56,7 @@ DataSetFiller::DataSetFiller(const char * proc, const char * cat, const RooArgLi
     name_ = Form("%s_", proc);
     name_ += cat;
     title_ = name_;
+    isData_= false;
     datasets_ = {new RooDataSet(name_.c_str(),title_.c_str(),RooArgSet(variables),weightVarName)};
     if( fillTree ) {
         std::string vars;
@@ -83,35 +85,86 @@ DataSetFiller::DataSetFiller(RooDataSet * dset) :
 
 
 std::vector<TString > DataSetFiller::datasetNames( ){
-    std::string gen = obs_[0];
-    //loop over gen boundaries
+    //    std::cout<<"inside datasetNames"<<std::endl;
     std::vector<TString > newnames;
-    for(int ib=0; ib < boundaries_[0].size()-1; ib++){
-        std::stringstream procname_ss;
-        procname_ss << proc_ << "_" << gen << "_"<< std::fixed << std::setprecision(1) << (boundaries_[0][ib]) << "_" << std::fixed<< std::setprecision(1) << (boundaries_[0][ib+1]) ;
-        //        string procname =  proc_+"_"+gen+"_"+std::to_string(boundaries_[0][ib])+"_"+std::to_string(boundaries_[0][ib+1]) ;
-        TString procname( procname_ss.str() );
-        procname.ReplaceAll(".", "p");
-        //        std::string procname =  procname_ss.str();
-        if(obs_.size()>1 ){
-            std::string reco = obs_[1];
-            for(int jb=0; jb < boundaries_[1].size()-1; jb++){
-                std::stringstream catname_ss;
-                catname_ss  << reco << "_" << std::fixed << std::setprecision(1) << (boundaries_[1][jb]) << "_" << std::fixed << std::setprecision(1) << (boundaries_[1][jb+1]) << "_" << cat_ ;
-                TString catname(catname_ss.str());
-                catname.ReplaceAll(".", "p");
-                //            std::string mystr = catname;
-                //            string catname =  cat_+"_"+reco+"_"+std::to_string(boundaries_[1][jb])+"_"+std::to_string(boundaries_[1][jb+1]) ;
+    std::string reco = obs_[0];
+    //    std::cout<<"reco var is "<<reco<<std::endl;
+    for(int jb=0; jb < boundaries_[0].size()-1; jb++){
+        //        std::cout<<"jb is "<<jb<<std::endl;
+        std::stringstream catname_ss;
+        std::streamsize ss_size = catname_ss.precision();
+        //        catname_ss  << reco << "_" << std::fixed << std::setprecision(1) << (boundaries_[0][jb]) << "_" << std::fixed << std::setprecision(1) << (boundaries_[0][jb+1]) << "_" << cat_ ;
+        //        catname_ss  << reco << "_" << (boundaries_[0][jb]) << "_" << (boundaries_[0][jb+1]) << "_" << cat_ ;
+        if( ( (int) boundaries_[0][jb] == boundaries_[0][jb] ) && ( (int) boundaries_[0][jb+1] == boundaries_[0][jb+1] )){
+            catname_ss  << reco << "_" << std::fixed << std::setprecision(1) << (boundaries_[0][jb]) << "_" << std::fixed << std::setprecision(1) << (boundaries_[0][jb+1]) << "_" << cat_ ;
+        }
+        else if ( ( (int) boundaries_[0][jb] == boundaries_[0][jb] ) && !( (int) boundaries_[0][jb+1] == boundaries_[0][jb+1] )  ){
+            catname_ss  << reco << "_" << std::fixed << std::setprecision(1) << (boundaries_[0][jb]) << "_";
+            catname_ss.unsetf(std::ios_base::floatfield);
+            //            catname_ss  << std::defaultfloat << std::setprecision(ss_size) << (boundaries_[0][jb+1]) << "_" << cat_ ;
+            catname_ss << std::setprecision(ss_size) << (boundaries_[0][jb+1]) << "_" << cat_ ;
+        }
+        else if ( !( (int) boundaries_[0][jb] == boundaries_[0][jb] ) && ( (int) boundaries_[0][jb+1] == boundaries_[0][jb+1] )  ){
+            //            catname_ss  << reco << "_" << std::defaultfloat << std::setprecision(ss_size) << (boundaries_[0][jb]) << "_"  << std::fixed  << std::setprecision(1) << (boundaries_[0][jb+1]) << "_" << cat_ ;
+            catname_ss  << reco << "_" <<  (boundaries_[0][jb]) << "_"  << std::fixed  << std::setprecision(1) << (boundaries_[0][jb+1]) << "_" << cat_ ;
+        }
+        else{
+            //            catname_ss  << reco << "_" << std::defaultfloat << std::setprecision(ss_size) << (boundaries_[0][jb]) << "_" << (boundaries_[0][jb+1]) << "_" << cat_ ;
+            catname_ss.unsetf(std::ios_base::floatfield);
+            catname_ss  << reco << "_"  << (boundaries_[0][jb]) << "_" << (boundaries_[0][jb+1]) << "_" << cat_ ;
+        }
+        // catname_ss  << reco << "_" << std::setprecision(1) << (boundaries_[0][jb]) << "_" << std::setprecision(1) << (boundaries_[0][jb+1]) << "_" << cat_ ;
+        TString catname(catname_ss.str());
+        catname.ReplaceAll(".", "p");
+        catname.ReplaceAll("-", "m");
+        //        std::cout<<"jb = "<< jb<< ", catname = "<< catname << std::endl;
+        if( ! isData_ ){
+            //            std::cout<<"this is not data, we loop over procs as well"<<std::endl;
+            std::string gen = obs_[1];
+            //loop over gen boundaries
+
+            for(int ib=0; ib < boundaries_[1].size()-1; ib++){
+                std::stringstream procname_ss;
+                std::streamsize ssp_size = procname_ss.precision();
+                if( ( (int) boundaries_[1][ib] == boundaries_[1][ib] ) && ( (int) boundaries_[1][ib+1] == boundaries_[1][ib+1] )){
+                    procname_ss << proc_ << "_" << gen << "_" << std::fixed << std::setprecision(1) << (boundaries_[1][ib]) << "_" << std::fixed << std::setprecision(1) << (boundaries_[1][ib+1]) ;
+                }
+                else if( ( (int) boundaries_[1][ib] == boundaries_[1][ib] ) && !( (int) boundaries_[1][ib+1] == boundaries_[1][ib+1] )){
+                    procname_ss << proc_ << "_" << gen << "_" << std::fixed << std::setprecision(1) << (boundaries_[1][ib]);
+                    procname_ss.unsetf(std::ios_base::floatfield);
+                    //                    procname_ss<< "_" << std::defaultfloat << std::setprecision(ssp_size) << (boundaries_[1][ib+1]) ;
+                    procname_ss << std::setprecision(ssp_size) << "_" << (boundaries_[1][ib+1]) ;
+                }
+                else if( !( (int) boundaries_[1][ib] == boundaries_[1][ib] ) && ( (int) boundaries_[1][ib+1] == boundaries_[1][ib+1] )){
+                    //                    procname_ss << proc_ << "_" << gen << "_" << std::defaultfloat << std::setprecision(ssp_size) << (boundaries_[1][ib]) << "_" << std::fixed << std::setprecision(1) << (boundaries_[1][ib+1]) ;
+                    procname_ss << proc_ << "_" << gen << "_"  << (boundaries_[1][ib]) << "_" << std::fixed << std::setprecision(1) << (boundaries_[1][ib+1]) ;
+                }
+                else{
+                    procname_ss.unsetf(std::ios_base::floatfield);
+                    procname_ss << proc_ << "_" << gen << "_" <<  (boundaries_[1][ib]) << "_" <<  (boundaries_[1][ib+1]) ;
+                }
+                //                procname_ss << proc_ << "_" << gen << "_"<< std::fixed << std::setprecision(1) << (boundaries_[1][ib]) << "_" << std::fixed<< std::setprecision(1) << (boundaries_[1][ib+1]) ;
+                //                procname_ss << proc_ << "_" << gen << "_" << (boundaries_[1][ib]) << "_" << (boundaries_[1][ib+1]) ;
+                //                procname_ss << proc_ << "_" << gen << "_" << std::setprecision(1) << (boundaries_[1][ib]) << "_" << std::setprecision(1) << (boundaries_[1][ib+1]) ;
+
+                //        string procname =  proc_+"_"+gen+"_"+std::to_string(boundaries_[0][ib])+"_"+std::to_string(boundaries_[0][ib+1]) ;
+                TString procname( procname_ss.str() );
+                procname.ReplaceAll(".", "p");
+                procname.ReplaceAll("-", "m");
+                //        std::string procname =  procname_ss.str();
+                //                std::cout<<"ib = "<< ib<< ", procname = "<< procname << std::endl;
+                
+
                 newnames.push_back(procname+"_"+catname);
             }
         }
         else{
-            newnames.push_back()
+            newnames.push_back(proc_+"_"+catname);
         }
     }
-
+    
     return newnames;
-
+    
 }
 
 //std::vector<std::string > DataSetFiller::datasetNames(std::vector<std::string > names, std::string var, std::vector<double > boundaries){
@@ -139,10 +192,19 @@ void DataSetFiller::setGrid(std::vector<std::string > obs, std::vector<std::vect
     }
     else{
         obs_ = obs;
+//        std::cout<<"observables in setGrid"<<std::endl;
+//        std::cout<<"0 "<< obs_[0] << std::endl;
+//        std::cout<<"1 "<< obs_[1] << std::endl;
+
+        if(obs_[1]==""){
+            //            std::cout<<"since obs[1] is  "<< obs_[1] << "these are data" << std::endl;
+            isData_= true ;
+        }
         boundaries_ = boundaries;
 
         datasets_ =  std::vector<RooDataSet * >();
         std::vector<TString > dsNames;
+        //        std::cout<<"about to call datasetNames"<<std::endl;
         dsNames = datasetNames();
 //        dsNames.push_back(name_);
 //        int nobs = obs_.size();
@@ -153,7 +215,7 @@ void DataSetFiller::setGrid(std::vector<std::string > obs, std::vector<std::vect
         
 
         for(auto dsname : dsNames){
-            std::cout<<"pushing back this dataset "<<dsname<<std::endl;
+            //            std::cout<<"pushing back this dataset "<<dsname<<std::endl;
             //            datasets_.push_back(new RooDataSet(dsname.Data(),title_.c_str(),RooArgSet(vars_),weightVarName_.c_str()));
             datasets_.push_back(new RooDataSet(dsname.Data(),dsname.Data(),RooArgSet(vars_),weightVarName_.c_str()));
         }
@@ -183,13 +245,17 @@ void DataSetFiller::fillFromTree(TTree * tree, const char * weightExpr, bool ign
         }
     }
 
-    std::vector<TTreeFormula *> formulas_obs(obs_.size());
+    std::vector<TTreeFormula *> formulas_obs;
     for(size_t iobs=0; iobs<obs_.size(); ++iobs){
-        formulas_obs[iobs] = new TTreeFormula( obs_[iobs].c_str(), obs_[iobs].c_str(), tree );
-        //        std::cout<<"formula for "<<obs_[iobs]<<std::endl;
+        if( ! (obs_[iobs] == "")){
+            //            std::cout<<"this obs is "<<obs_[iobs]<<", so we add it"<<std::endl;
+            TTreeFormula* fo= new TTreeFormula( obs_[iobs].c_str(), obs_[iobs].c_str(), tree );
+            formulas_obs.push_back(fo);
+            //            std::cout<<"formula for "<<obs_[iobs]<<std::endl;
+        }
     }
     
-    
+    //    std::cout<<"size of obs formulas "<<formulas_obs.size()<<std::endl;
 
     for(int iev=0; iev<tree->GetEntries(); ++iev) {
         tree->GetEntry(iev);
@@ -207,7 +273,7 @@ void DataSetFiller::fillFromTree(TTree * tree, const char * weightExpr, bool ign
             if( tree_ ) { treeBuf_[ivar] = val; }
         }
         std::vector<double > obsVals;
-        for(size_t iobs=0; iobs<obs_.size(); ++iobs){
+        for(size_t iobs=0; iobs<formulas_obs.size(); ++iobs){
             //            std::cout<<"evaluating formula for "<<obs_[iobs]<<std::endl;
             //            std::cout<<"val =  "<< formulas_obs[iobs]->EvalInstance()  <<std::endl;
             obsVals.push_back( formulas_obs[iobs]->EvalInstance() );
@@ -235,16 +301,20 @@ int DataSetFiller::getDatasetIndex(std::vector<double > obsVals){
     std::vector<int > indexes;
     for(int io=0; io<obs_.size(); io++){
         //        std::cout<<"ds index search: obs index "<<io<<std::endl;
+        if(isData_ && ( io>0  ) ){
+            break;
+        }
         indexes.push_back( ( std::lower_bound(boundaries_[io].begin(), boundaries_[io].end(), obsVals[io]) - boundaries_[io].begin() ) -1  );
         //        std::cout<<"index pushed for this obs is: "<<indexes[indexes.size()-1]<<std::endl;
+        
     }
     int index = 0;
     //    std::cout<<"index calc: "<<index<<std::endl;
-    for(int io=0; io<obs_.size(); io++){
+    for(int io=0; io<indexes.size(); io++){
         int isize = 1;
         //        std::cout<<"io "<<io<<std::endl;
         //        std::cout<<"index "<<index<<std::endl;
-        for(int i=io+1; i<obs_.size(); i++){
+        for(int i=io+1; i<indexes.size(); i++){
             isize *= boundaries_[i].size() -1;
             //            std::cout<<"i "<<i<<std::endl;
             //            std::cout<<"isize "<<isize<<std::endl;
