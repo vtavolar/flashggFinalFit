@@ -171,9 +171,11 @@ int main(int argc, char *argv[]){
 
   // Criteria to choose #gauss
   int   minNevts    = 500; // if below minNevts #gauss = -1  
-  float myThresholdDist = 0.8; // how much better n+1 has to be wrt n
-  float myThresholdChi2 = 0.5; // how much better n+1 has to be wrt n
-  float itsOK       = 0.1; // if  myDistance < itsOK suggest the #gauss that fulfill this condition
+  //  float myThresholdDist = 0.8; // how much better n+1 has to be wrt n
+  float myThresholdDist = 1.0; // how much better n+1 has to be wrt n
+  //  float myThresholdChi2 = 0.5; // how much better n+1 has to be wrt n
+  float myThresholdChi2 = 1.0; // how much better n+1 has to be wrt n
+  float itsOK       = 0.3; // if  myDistance < itsOK suggest the #gauss that fulfill this condition
 
   OptionParser(argc,argv);
   verbose_=true;
@@ -293,6 +295,18 @@ int main(int argc, char *argv[]){
     plotsRV.insert(pair<string,vector<RooPlot*> >(procs[p],tempRV));
     plotsWV.insert(pair<string,vector<RooPlot*> >(procs[p],tempWV));
   }
+
+
+  for(map<string, vector<RooPlot*> >::const_iterator it = plotsRV.begin();it != plotsRV.end(); ++it)
+    {
+      for(int ip=0; ip < it->second.size(); ip++){
+	std::cout<<"plotsRV"<<std::endl;
+	std::cout << it->first << " " ;
+	((RooPlot*)it->second[ip])->Print()  ;
+	std::cout << std::endl;
+      }
+    }
+
   
   // decide what color to make the fits in output plots...
   vector<int> colors;
@@ -356,11 +370,22 @@ int main(int argc, char *argv[]){
       
       // access dataset and immediately reduce it!
       if (isFlashgg_){
+	//VRT 16.05.17: attempt to adapt to differentials naming convenction
+	string proctemp = proc;
+	string procWmassAndE;
+	if(proctemp.find_first_of("_") != string::npos){
+	  procWmassAndE = proctemp.insert(proctemp.find_first_of("_"), Form("_%d_13TeV", mass_) );
+	}
+	else{
+	  procWmassAndE = proctemp.append( Form("_%d_13TeV", mass_) );
+	}
 	if(verbose_){
-	  std::cout<<"Looking for dataset "<<Form("%s_%d_13TeV_%s",proc.c_str(),mass_,flashggCats_[cat].c_str())<<std::endl;
+	  std::cout<<"Looking for dataset "<<Form("%s_%s",procWmassAndE.c_str(),flashggCats_[cat].c_str())<<std::endl;
+	  //std::cout<<"Looking for dataset "<<Form("%s_%d_13TeV_%s",proc.c_str(),mass_,flashggCats_[cat].c_str())<<std::endl;
 	}
 	RooDataSet *data0   = (RooDataSet*)inWS->data(
-						      Form("%s_%d_13TeV_%s",proc.c_str(),mass_,flashggCats_[cat].c_str()));
+						      //						      Form("%s_%d_13TeV_%s",proc.c_str(),mass_,flashggCats_[cat].c_str()));
+						      Form("%s_%s",procWmassAndE.c_str(),flashggCats_[cat].c_str()));
         if(verbose_) {
           std::cout << "[INFO] got dataset data0 ? " << data0 << "now make empty clones " << std::endl;
           if (data0) {
@@ -372,7 +397,11 @@ int main(int argc, char *argv[]){
         }
         
 	// this is to make it uniform with SignalFit
-	data   = reduceDataset((RooDataSet*)inWS->data(Form("%s_%d_13TeV_%s",proc.c_str(),mass_,flashggCats_[cat].c_str())));
+
+
+	//	data   = reduceDataset((RooDataSet*)inWS->data(Form("%s_%d_13TeV_%s",proc.c_str(),mass_,flashggCats_[cat].c_str())));
+	data   = reduceDataset((RooDataSet*)inWS->data(Form("%s_%s",procWmassAndE.c_str(),flashggCats_[cat].c_str()) ) );
+
 	dataRV = rvwvDataset(data,"RV"); 
 	dataWV = rvwvDataset(data,"WV"); 
 	
@@ -425,7 +454,8 @@ int main(int argc, char *argv[]){
 	if (verbose_) {
           std::cout 
             << "[INFO] Retrieved combined RV/WV data " 
-            << Form("%s_%d_13TeV_%s",proc.c_str(),mass_,flashggCats_[cat].c_str()) 
+	    //            << Form("%s_%d_13TeV_%s",proc.c_str(),mass_,flashggCats_[cat].c_str()) 
+	    << Form("%s_%s",procWmassAndE.c_str(),flashggCats_[cat].c_str())
             << "? "<< data<<std::endl;
 	  std::cout<<"[DEBUGVRT] mean is "<<data->mean(*mass)<<std::endl;
         }
@@ -477,6 +507,9 @@ int main(int argc, char *argv[]){
 
       float rv_prob_limit =999;
 
+      std::cout<<"before ploton"<<std::endl;
+      std::cout<<"proc "<<proc<<"cat "<<cat<<std::endl;
+      std::cout<<plotsRV[proc][cat]<<std::endl;
       dataRV->plotOn(plotsRV[proc][cat]);
 
       TCanvas *ccResRV  = new TCanvas("ccResRV","Residuals",600,600);

@@ -232,19 +232,30 @@ void InitialFit::runFits(int ncpu){
     assert(datasets.find(mh)!=datasets.end());
     RooAddPdf *fitModel125 = sumOfGaussians[mh];
     //RooDataSet *data125 = datasets[mh];
+    std::cout<<"printing datsets in initialfit"<<std::endl;
+    for (std::map<int,RooDataSet*>::iterator it=datasets.begin(); it!=datasets.end(); ++it){
+      std::cout<<"key "<<it->first<<std::endl;
+      std::cout<<"value->Print()"<<std::endl;
+      it->second->Print("v");
+    }
+    
     RooAbsData *data125;
     if (binnedFit_){
        data125 = datasets[mh]->binnedClone();
      } else {
          data125 = datasets[mh];
        }
+     std::cout<<"[DEBUGVRT] InitialFit, first data125 mean "<<data125->mean(*mass)<<std::endl;
     // help when dataset has no entries
      if (data125->sumEntries()<1.e-5) {
          mass->setVal(mh);
          data125->add(RooArgSet(*mass),1.e-5);
        }
-    //fitModel125->Print();
-    //data125->Print();
+     fitModel125->Print();
+     std::cout<<"print data125"<<std::endl;
+     data125->Print("v");
+     std::cout<<"mass var print"<<std::endl;
+     mass->Print();
      std::cout<<"[DEBUGVRT] InitialFit, data125 mean "<<data125->mean(*mass)<<std::endl;
     RooFitResult *fitRes125;
     mass->setBins(bins_);

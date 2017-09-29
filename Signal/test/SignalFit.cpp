@@ -92,6 +92,8 @@ string  splitStr_;
 float newIntLumi_;
 float originalIntLumi_;
 
+string normalisationCut_;
+
 float mcBeamSpotWidth_=5.14; //cm
 //float dataBeamSpotWidth_=4.24; //cm
 float dataBeamSpotWidth_=3.5; //cm
@@ -145,6 +147,7 @@ vector<int> map_nG_rv_;
 vector<int> map_nG_wv_;
 RooRealVar *mass_;
 RooRealVar *dZ_;
+RooRealVar *procIndex_;
 RooRealVar *intLumi_;
 bool beamSpotReweigh_ = false;
 bool shiftOffDiag_ = false;
@@ -154,6 +157,7 @@ string optReferenceProc_ = "";
 string optReferenceProcDifferential_ = "";
 string optReferenceTagDifferential_ = "";
 string optReferenceTagWV_ = "";
+string optReferenceProcWV_ = "";
 
 // set range to be the same as FTest
 // want quite a large range otherwise don't
@@ -163,91 +167,93 @@ float rangeHigh = 140;
 
 
 void OptionParser(int argc, char *argv[]){
-	po::options_description desc1("Allowed options");
-	desc1.add_options()
-		("help,h",                                                                                			"Show help")
-		("infilename,i", po::value<string>(&filenameStr_),                                           			"Input file name")
-		("outfilename,o", po::value<string>(&outfilename_)->default_value("CMS-HGG_sigfit.root"), 			"Output file name")
-		("merge,m", po::value<string>(&mergefilename_)->default_value(""),                               	        "Merge the output with the given workspace")
-		("datfilename,d", po::value<string>(&datfilename_)->default_value("dat/newConfig.dat"),      			"Configuration file")
-		("systfilename,s", po::value<string>(&systfilename_)->default_value(""),		"Systematic model numbers")
-		("plotDir,p", po::value<string>(&plotDir_)->default_value("plots"),						"Put plots in this directory")
-		("skipPlots", 																																									"Do not make any plots")
-	  ("mhLow,L", po::value<int>(&mhLow_)->default_value(110),                                  			"Low mass point")
-	  ("mcBeamSpotWidth", po::value<float>(&mcBeamSpotWidth_)->default_value(5.14),                                  "Default width of MC beamspot")
-	  ("dataBeamSpotWidth", po::value<float>(&dataBeamSpotWidth_)->default_value(3.50),                                  "Default width of data beamspot")
-		("nThreads,t", po::value<int>(&ncpu_)->default_value(ncpu_),                               			"Number of threads to be used for the fits")
-		("mhHigh,H", po::value<int>(&mhHigh_)->default_value(140),                                			"High mass point")
-		// ("nCats,n", po::value<int>(&nCats_)->default_value(9),                                    			"Number of total categories")
-		("constraintValue,C", po::value<float>(&constraintValue_)->default_value(0.1),            			"Constraint value")
-		("constraintValueMass,M", po::value<int>(&constraintValueMass_)->default_value(125),                        "Constraint value mass")
-		("pdfWeights", po::value<int>(&pdfWeights_)->default_value(0),                        "If pdf systematics should be considered, say how many (default 0 = off)")
-		("skipSecondaryModels",                                                                   			"Turn off creation of all additional models")
-		("doQuadraticSigmaSum",  										        "Add sigma systematic terms in quadrature")
-		("procs", po::value<string>(&procStr_)->default_value("ggh,vbf,wh,zh,tth"),					"Processes (comma sep)")
-		("skipMasses", po::value<string>(&massesToSkip_)->default_value(""),					"Skip these mass points - used eg for the 7TeV where there's no mc at 145")
-		("runInitialFitsOnly",                                                                                      "Just fit gaussians - no interpolation, no systematics - useful for testing nGaussians")
-		("cloneFits", po::value<string>(&cloneFitFile_),															"Do not redo the fits but load the fit parameters from this workspace. Pass as fileName:wsName.")
-		("nonRecursive",                                                                             		"Do not recursively calculate gaussian fractions")
-		("verbose,v", po::value<int>(&verbose_)->default_value(0),                                			"Verbosity level: 0 (lowest) - 3 (highest)")
-		("isFlashgg",	po::value<bool>(&isFlashgg_)->default_value(true),														"Use flashgg format")
-		("binnedFit",	po::value<bool>(&binnedFit_)->default_value(true),														"Binned Signal fit")
-		("nBins",	po::value<int>(&nBins_)->default_value(80),														"If using binned signal for fit, how many bins in 100-180?")
-		("checkYields",	po::value<bool>(&checkYields_)->default_value(false),														"Use flashgg format (default false)")
-	  ("beamSpotReweigh",po::value<bool>(&beamSpotReweigh_)->default_value(false),"Reweight events to  discrepancy in width of beamspot between data and MC")
-	  ("shiftOffDiag",po::value<bool>(&shiftOffDiag_)->default_value(false),"Shift mean to correct for scale bias in 'off-diagonal' elements of differential analysis ")
-      ("split", po::value<string>(&splitStr_)->default_value(""), "do just one tag,proc ")
-		("changeIntLumi",	po::value<float>(&newIntLumi_)->default_value(0),														"If you want to specify an intLumi other than the one in the file. The event weights and rooRealVar IntLumi are both changed accordingly. (Specify new intlumi in fb^{-1})")
-		("flashggCats,f", po::value<string>(&flashggCatsStr_)->default_value("UntaggedTag_0,UntaggedTag_1,UntaggedTag_2,UntaggedTag_3,UntaggedTag_4,VBFTag_0,VBFTag_1,VBFTag_2,TTHHadronicTag,TTHLeptonicTag,VHHadronicTag,VHTightTag,VHLooseTag,VHEtTag"),       "Flashgg categories if used")
-		("MHref", po::value<float>(&MHref_)->default_value(0.),            			"reference MH for xsec")
-		("refProc", po::value<		string>(&optReferenceProc_)->default_value(""),            			"reference proc for replacement")
-		("refProcDiff", po::value<	string>(&optReferenceProcDifferential_)->default_value(""),            			"reference proc for replacement for differential analysis")
-		("refTagDiff", po::value<	string>(&optReferenceTagDifferential_)->default_value(""),            			"reference tag for replacement for differential analysis (RV)")
-	("refTagWV", po::value<			string>(&optReferenceTagWV_)->default_value(""),            			"reference tag for replacement WV")
-		;                                                                                             		
-
-	po::options_description desc("Allowed options");
-	desc.add(desc1);
-
-	po::variables_map vm;
-	po::store(po::parse_command_line(argc,argv,desc),vm);
-	po::notify(vm);
-	if (vm.count("help")){ cout << desc << endl; exit(1);}
-	if (vm.count("skipPlots"))								skipPlots_=true;
-	if (vm.count("spin"))                     spin_=true;
-	if (vm.count("isCutBased"))               isCutBased_=true;
-	if (vm.count("is2011"))               		is2011_=true;
-	if (vm.count("is2011"))               		sqrts_=7;
-	if (vm.count("is2012"))               		is2012_=true;
-	if (vm.count("is2012"))               		sqrts_=8;
-	if (vm.count("runInitialFitsOnly"))       runInitialFitsOnly_=true;
-	if (vm.count("cloneFits"))								cloneFits_=true;
-	if (vm.count("nosplitRVWV"))              splitRVWV_=false;
-	if (vm.count("doQuadraticSigmaSum"))			doQuadraticSigmaSum_=true;
-	if (vm.count("skipSecondaryModels"))      doSecondaryModels_=false;
-	if (vm.count("recursive"))                recursive_=false;
-	if (vm.count("skipMasses")) {
-		cout << "[INFO] Masses to skip... " << endl;
-		vector<string> els;
-
+  po::options_description desc1("Allowed options");
+  desc1.add_options()
+    ("help,h",                                                                                			"Show help")
+    ("infilename,i", po::value<string>(&filenameStr_),                                           			"Input file name")
+    ("outfilename,o", po::value<string>(&outfilename_)->default_value("CMS-HGG_sigfit.root"), 			"Output file name")
+    ("merge,m", po::value<string>(&mergefilename_)->default_value(""),                               	        "Merge the output with the given workspace")
+    ("datfilename,d", po::value<string>(&datfilename_)->default_value("dat/newConfig.dat"),      			"Configuration file")
+    ("systfilename,s", po::value<string>(&systfilename_)->default_value(""),		"Systematic model numbers")
+    ("plotDir,p", po::value<string>(&plotDir_)->default_value("plots"),						"Put plots in this directory")
+    ("skipPlots", 																																									"Do not make any plots")
+    ("mhLow,L", po::value<int>(&mhLow_)->default_value(110),                                  			"Low mass point")
+    ("mcBeamSpotWidth", po::value<float>(&mcBeamSpotWidth_)->default_value(5.14),                                  "Default width of MC beamspot")
+    ("dataBeamSpotWidth", po::value<float>(&dataBeamSpotWidth_)->default_value(3.50),                                  "Default width of data beamspot")
+    ("nThreads,t", po::value<int>(&ncpu_)->default_value(ncpu_),                               			"Number of threads to be used for the fits")
+    ("mhHigh,H", po::value<int>(&mhHigh_)->default_value(140),                                			"High mass point")
+    // ("nCats,n", po::value<int>(&nCats_)->default_value(9),                                    			"Number of total categories")
+    ("constraintValue,C", po::value<float>(&constraintValue_)->default_value(0.1),            			"Constraint value")
+    ("constraintValueMass,M", po::value<int>(&constraintValueMass_)->default_value(125),                        "Constraint value mass")
+    ("pdfWeights", po::value<int>(&pdfWeights_)->default_value(0),                        "If pdf systematics should be considered, say how many (default 0 = off)")
+    ("skipSecondaryModels",                                                                   			"Turn off creation of all additional models")
+    ("doQuadraticSigmaSum",  										        "Add sigma systematic terms in quadrature")
+    ("procs", po::value<string>(&procStr_)->default_value("ggh,vbf,wh,zh,tth"),					"Processes (comma sep)")
+    ("skipMasses", po::value<string>(&massesToSkip_)->default_value(""),					"Skip these mass points - used eg for the 7TeV where there's no mc at 145")
+    ("runInitialFitsOnly",                                                                                      "Just fit gaussians - no interpolation, no systematics - useful for testing nGaussians")
+    ("cloneFits", po::value<string>(&cloneFitFile_),															"Do not redo the fits but load the fit parameters from this workspace. Pass as fileName:wsName.")
+    ("nonRecursive",                                                                             		"Do not recursively calculate gaussian fractions")
+    ("verbose,v", po::value<int>(&verbose_)->default_value(0),                                			"Verbosity level: 0 (lowest) - 3 (highest)")
+    ("isFlashgg",	po::value<bool>(&isFlashgg_)->default_value(true),														"Use flashgg format")
+    ("binnedFit",	po::value<bool>(&binnedFit_)->default_value(true),														"Binned Signal fit")
+    ("nBins",	po::value<int>(&nBins_)->default_value(80),														"If using binned signal for fit, how many bins in 100-180?")
+    ("checkYields",	po::value<bool>(&checkYields_)->default_value(false),														"Use flashgg format (default false)")
+    ("beamSpotReweigh",po::value<bool>(&beamSpotReweigh_)->default_value(false),"Reweight events to  discrepancy in width of beamspot between data and MC")
+    ("shiftOffDiag",po::value<bool>(&shiftOffDiag_)->default_value(false),"Shift mean to correct for scale bias in 'off-diagonal' elements of differential analysis ")
+    ("split", po::value<string>(&splitStr_)->default_value(""), "do just one tag,proc ")
+    ("changeIntLumi",	po::value<float>(&newIntLumi_)->default_value(0),														"If you want to specify an intLumi other than the one in the file. The event weights and rooRealVar IntLumi are both changed accordingly. (Specify new intlumi in fb^{-1})")
+    ("flashggCats,f", po::value<string>(&flashggCatsStr_)->default_value("UntaggedTag_0,UntaggedTag_1,UntaggedTag_2,UntaggedTag_3,UntaggedTag_4,VBFTag_0,VBFTag_1,VBFTag_2,TTHHadronicTag,TTHLeptonicTag,VHHadronicTag,VHTightTag,VHLooseTag,VHEtTag"),       "Flashgg categories if used")
+    ("MHref", po::value<float>(&MHref_)->default_value(0.),            			"reference MH for xsec")
+    ("refProc", po::value<		string>(&optReferenceProc_)->default_value(""),            			"reference proc for replacement")
+    ("refProcDiff", po::value<	string>(&optReferenceProcDifferential_)->default_value(""),            			"reference proc for replacement for differential analysis")
+    ("refTagDiff", po::value<	string>(&optReferenceTagDifferential_)->default_value(""),            			"reference tag for replacement for differential analysis (RV)")
+    ("refTagWV", po::value<			string>(&optReferenceTagWV_)->default_value(""),            			"reference tag for replacement WV")
+    ("refProcWV", po::value<			string>(&optReferenceProcWV_)->default_value(""),            			"reference proc for replacement WV")
+    ("normalisationCut", po::value<string>(&normalisationCut_)->default_value("1"),            			"specify cut to apply on the final normalisation, e.g. select process with processIndex == xx")
+    ;                                                                                             		
+  
+  po::options_description desc("Allowed options");
+  desc.add(desc1);
+  
+  po::variables_map vm;
+  po::store(po::parse_command_line(argc,argv,desc),vm);
+  po::notify(vm);
+  if (vm.count("help")){ cout << desc << endl; exit(1);}
+  if (vm.count("skipPlots"))								skipPlots_=true;
+  if (vm.count("spin"))                     spin_=true;
+  if (vm.count("isCutBased"))               isCutBased_=true;
+  if (vm.count("is2011"))               		is2011_=true;
+  if (vm.count("is2011"))               		sqrts_=7;
+  if (vm.count("is2012"))               		is2012_=true;
+  if (vm.count("is2012"))               		sqrts_=8;
+  if (vm.count("runInitialFitsOnly"))       runInitialFitsOnly_=true;
+  if (vm.count("cloneFits"))								cloneFits_=true;
+  if (vm.count("nosplitRVWV"))              splitRVWV_=false;
+  if (vm.count("doQuadraticSigmaSum"))			doQuadraticSigmaSum_=true;
+  if (vm.count("skipSecondaryModels"))      doSecondaryModels_=false;
+  if (vm.count("recursive"))                recursive_=false;
+  if (vm.count("skipMasses")) {
+    cout << "[INFO] Masses to skip... " << endl;
+    vector<string> els;
+    
     // if you want to skip masses for some reason...
-		split(els,massesToSkip_,boost::is_any_of(","));
-		if (els.size()>0 && massesToSkip_!="") {
-			for (vector<string>::iterator it=els.begin(); it!=els.end(); it++) {
-				skipMasses_.push_back(boost::lexical_cast<int>(*it));
-			}
-		}
-		cout << "\t";
-		for (vector<int>::iterator it=skipMasses_.begin(); it!=skipMasses_.end(); it++) cout << *it << " ";
-		cout << endl;
-	}
-	
+    split(els,massesToSkip_,boost::is_any_of(","));
+    if (els.size()>0 && massesToSkip_!="") {
+      for (vector<string>::iterator it=els.begin(); it!=els.end(); it++) {
+	skipMasses_.push_back(boost::lexical_cast<int>(*it));
+      }
+    }
+    cout << "\t";
+    for (vector<int>::iterator it=skipMasses_.begin(); it!=skipMasses_.end(); it++) cout << *it << " ";
+    cout << endl;
+  }
+  
   // split options which are fiven as lists
   split(procs_,procStr_,boost::is_any_of(","));
-	split(flashggCats_,flashggCatsStr_,boost::is_any_of(","));
-	split(filename_,filenameStr_,boost::is_any_of(","));
+  split(flashggCats_,flashggCatsStr_,boost::is_any_of(","));
+  split(filename_,filenameStr_,boost::is_any_of(","));
   split(split_,splitStr_,boost::is_any_of(",")); // proc,cat
-
+  
 }
 
 // used to get index of the reference dataset in the list of requried guassians.
@@ -270,87 +276,90 @@ unsigned int getIndexOfReferenceDataset(string proc, string cat){
   
   if (iLine==-1 ) {
     std::cout << "ERROR could not find the index of the category you wished to look up. Exit!" << std::endl;
-     exit(1);
+    exit(1);
   }
   return iLine;
 }
 
 // is this still used ? -LC 
 void transferMacros(TFile *inFile, TDirectory *outFile){
-
-	TIter next(inFile->GetListOfKeys());
-	TKey *key;
-	while ((key = (TKey*)next())){
-		if (string(key->ReadObj()->ClassName())=="TMacro") {
-			//cout << key->ReadObj()->ClassName() << " : " << key->GetName() << endl;
-			TMacro *macro = (TMacro*)inFile->Get(key->GetName());
-			outFile->cd();
-			macro->Write();
-		}
-	}
+  
+  TIter next(inFile->GetListOfKeys());
+  TKey *key;
+  while ((key = (TKey*)next())){
+    if (string(key->ReadObj()->ClassName())=="TMacro") {
+      //cout << key->ReadObj()->ClassName() << " : " << key->GetName() << endl;
+      TMacro *macro = (TMacro*)inFile->Get(key->GetName());
+      outFile->cd();
+      macro->Write();
+    }
+  }
 }
 
 
 void addToCloneMap(clonemap_t &cloneMap, string proc, string cat, string name, RooSpline1D *spline){
-
-	pair<string,string> mapKey = make_pair(proc,cat);
-	if (cloneMap.find(mapKey)==cloneMap.end()){
-		map<string,RooSpline1D*> tempMap;
-		tempMap.insert(make_pair(name,spline));
-		cloneMap.insert(make_pair(mapKey,tempMap));
-	}
-	else {
-		cloneMap[mapKey].insert(make_pair(name,spline));
-	}
+  
+  pair<string,string> mapKey = make_pair(proc,cat);
+  if (cloneMap.find(mapKey)==cloneMap.end()){
+    map<string,RooSpline1D*> tempMap;
+    tempMap.insert(make_pair(name,spline));
+    cloneMap.insert(make_pair(mapKey,tempMap));
+  }
+  else {
+    cloneMap[mapKey].insert(make_pair(name,spline));
+  }
 }
 
 
 void makeCloneConfig(clonemap_t mapRV, clonemap_t mapWV, string newdatfilename){
-
-	system("mkdir -p tmp");
-	ofstream datfile;
-	datfile.open(newdatfilename.c_str());
-	if (datfile.fail()) {
-		std::cerr << "Could not open " << newdatfilename << std::endl;
-		exit(1);
-	}
-	for (clonemap_t::iterator it=mapRV.begin(); it!=mapRV.end(); it++){
-		string proc = it->first.first;
-		string cat = it->first.second;
-		map<string,RooSpline1D*> paramsRV = it->second;
-		map<string,RooSpline1D*> paramsWV = mapWV[make_pair(proc,cat)];
-		int countRV=0;
-		int countWV=0;
-		for (map<string,RooSpline1D*>::iterator pIt=paramsRV.begin(); pIt!=paramsRV.end(); pIt++){
-			if (pIt->first.find("dm_g")!=string::npos && pIt->first.find("_SM")==string::npos && pIt->first.find("_2")==string::npos && pIt->first.find("_NW")==string::npos){
-				countRV++;
-			}
-		}
-		for (map<string,RooSpline1D*>::iterator pIt=paramsWV.begin(); pIt!=paramsWV.end(); pIt++){
-			if (pIt->first.find("dm_g")!=string::npos && pIt->first.find("_SM")==string::npos && pIt->first.find("_2")==string::npos && pIt->first.find("_NW")==string::npos){
-				countWV++;
-			}
-		}
-		if (verbose_) cout << "[INFO] "<< proc << " " << cat << " " << countRV << " " << countWV << endl;
-		datfile << proc << " " << cat << " " << countRV << " " << countWV << endl;
-	}
-	datfile.close();
-
+  
+  system("mkdir -p tmp");
+  ofstream datfile;
+  datfile.open(newdatfilename.c_str());
+  if (datfile.fail()) {
+    std::cerr << "Could not open " << newdatfilename << std::endl;
+    exit(1);
+  }
+  for (clonemap_t::iterator it=mapRV.begin(); it!=mapRV.end(); it++){
+    string proc = it->first.first;
+    string cat = it->first.second;
+    map<string,RooSpline1D*> paramsRV = it->second;
+    map<string,RooSpline1D*> paramsWV = mapWV[make_pair(proc,cat)];
+    int countRV=0;
+    int countWV=0;
+    for (map<string,RooSpline1D*>::iterator pIt=paramsRV.begin(); pIt!=paramsRV.end(); pIt++){
+      if (pIt->first.find("dm_g")!=string::npos && pIt->first.find("_SM")==string::npos && pIt->first.find("_2")==string::npos && pIt->first.find("_NW")==string::npos){
+	countRV++;
+      }
+    }
+    for (map<string,RooSpline1D*>::iterator pIt=paramsWV.begin(); pIt!=paramsWV.end(); pIt++){
+      if (pIt->first.find("dm_g")!=string::npos && pIt->first.find("_SM")==string::npos && pIt->first.find("_2")==string::npos && pIt->first.find("_NW")==string::npos){
+	countWV++;
+      }
+    }
+    if (verbose_) cout << "[INFO] "<< proc << " " << cat << " " << countRV << " " << countWV << endl;
+    datfile << proc << " " << cat << " " << countRV << " " << countWV << endl;
+  }
+  datfile.close();
+  
 }
 
 RooDataSet * reduceDataset(RooDataSet *data0){
-
-  RooDataSet *data = (RooDataSet*) data0->emptyClone()->reduce(RooArgSet(*mass_, *dZ_));
-	RooRealVar *weight0 = new RooRealVar("weight","weight",-100000,1000000);
+  
+  RooDataSet *data = (RooDataSet*) data0->emptyClone()->reduce(RooArgSet(*mass_, *dZ_, *procIndex_));
+  RooRealVar *weight0 = new RooRealVar("weight","weight",-100000,1000000);
+  std::cout<<"reduceDataset: dataset "<<data0->GetName()<<std::endl;
   for (unsigned int i=0 ; i < data0->numEntries() ; i++){
     if (data0->get(i)->getRealValue("CMS_hgg_mass") > rangeLow && data0->get(i)->getRealValue("CMS_hgg_mass") <rangeHigh ){
       mass_->setVal(data0->get(i)->getRealValue("CMS_hgg_mass"));
+      //      std::cout<<"reduceDataset: entry "<<i<<", CMS_hgg_mass = "<<data0->get(i)->getRealValue("CMS_hgg_mass")<<std::endl;
       weight0->setVal(data0->weight() ); // <--- is this correct?
       dZ_->setVal(data0->get(i)->getRealValue("dZ"));
-      data->add( RooArgList(*mass_, *dZ_, *weight0), weight0->getVal() );
+      procIndex_->setVal(data0->get(i)->getRealValue("processIndex"));
+      data->add( RooArgList(*mass_, *dZ_, *procIndex_, *weight0), weight0->getVal() );
     }
   }
-return data;
+  return data;
 }
 
 
@@ -391,18 +400,21 @@ void plotBeamSpotDZdist(RooDataSet *data0, string suffix=""){
 
 RooDataSet * rvwvDataset(RooDataSet *data0, string rvwv){
   
-  RooDataSet *dataRV = (RooDataSet*) data0->emptyClone()->reduce(RooArgSet(*mass_, *dZ_));
-  RooDataSet *dataWV = (RooDataSet*) data0->emptyClone()->reduce(RooArgSet(*mass_, *dZ_));
+  RooDataSet *dataRV = (RooDataSet*) data0->emptyClone()->reduce(RooArgSet(*mass_, *dZ_, *procIndex_));
+  RooDataSet *dataWV = (RooDataSet*) data0->emptyClone()->reduce(RooArgSet(*mass_, *dZ_, *procIndex_));
   RooRealVar *weight0 = new RooRealVar("weight","weight",-100000,1000000);
+  std::cout<<"rvwvDataset: dataset "<<data0->GetName()<<std::endl;
   for (unsigned int i=0 ; i < data0->numEntries() ; i++){
     if (data0->get(i)->getRealValue("CMS_hgg_mass") > rangeLow && data0->get(i)->getRealValue("CMS_hgg_mass") < rangeHigh ){
       mass_->setVal(data0->get(i)->getRealValue("CMS_hgg_mass"));
+      //      std::cout<<"rvwvDataset: entry "<<i<<", CMS_hgg_mass = "<<data0->get(i)->getRealValue("CMS_hgg_mass")<<std::endl;
       weight0->setVal(data0->weight() ); // <--- is this correct?
       dZ_->setVal(data0->get(i)->getRealValue("dZ"));
+      procIndex_->setVal(data0->get(i)->getRealValue("processIndex"));
       if (dZ_->getVal() <1.){
-	dataRV->add( RooArgList(*mass_, *dZ_, *weight0), weight0->getVal() );
+	dataRV->add( RooArgList(*mass_, *dZ_, *procIndex_, *weight0), weight0->getVal() );
       } else{
-	dataWV->add( RooArgList(*mass_, *dZ_, *weight0), weight0->getVal() );
+	dataWV->add( RooArgList(*mass_, *dZ_, *procIndex_, *weight0), weight0->getVal() );
       }
     }
   }
@@ -423,28 +435,31 @@ RooDataSet * beamSpotReweigh(RooDataSet *data0 /*original dataset*/){
   data0->Print();
   plotBeamSpotDZdist(data0,"before");
   data0->Print();
+  std::cout<<"beamSpotReweigh: dataset "<<data0->GetName()<<std::endl;
   for (int i = 0; i < data0->numEntries(); i++) {
     mass_->setVal(data0->get(i)->getRealValue("CMS_hgg_mass"));
+    //    std::cout<<"beamSpotReweigh: entry "<<i<<", CMS_hgg_mass = "<<data0->get(i)->getRealValue("CMS_hgg_mass")<<std::endl;
     dZ_->setVal(data0->get(i)->getRealValue("dZ"));
+    procIndex_->setVal(data0->get(i)->getRealValue("processIndex"));
     double factor =1.0;
     
     if (fabs(dZ_->getVal()) < 0.1 ){
       factor =1;
     } else {
-       double mcBeamSpot=TMath::Gaus(dZ_->getVal(),0,TMath::Sqrt(2)*mcBeamSpotWidth_,true); 
-       double dataBeamSpot=TMath::Gaus(dZ_->getVal(),0,TMath::Sqrt(2)*dataBeamSpotWidth_,true); 
-       factor = dataBeamSpot/mcBeamSpot; 
+      double mcBeamSpot=TMath::Gaus(dZ_->getVal(),0,TMath::Sqrt(2)*mcBeamSpotWidth_,true); 
+      double dataBeamSpot=TMath::Gaus(dZ_->getVal(),0,TMath::Sqrt(2)*dataBeamSpotWidth_,true); 
+      factor = dataBeamSpot/mcBeamSpot; 
     }
     //std::cout << " LC DEBUG entry "<< i << " dZ " << dZ_->getVal() << " factor "<< factor  << std::endl;
     
     weight0->setVal(factor * data0->weight() ); // <--- is this correct?
-    data->add( RooArgList(*mass_, *dZ_, *weight0), weight0->getVal() );
+    data->add( RooArgList(*mass_, *dZ_, *procIndex_, *weight0), weight0->getVal() );
   }
   data->Print();
   plotBeamSpotDZdist(data,"after");
   std::cout<<"data after BS reweighting"<<std::endl;
   data->Print();  
-
+  
   if (verbose_) std::cout << "[INFO] Old dataset (before beamSpot  reweight): " << *data0 << std::endl;
   if (verbose_) std::cout << "[INFO] New dataset (after beamSpot reweight):  " << *data << std::endl;
   
@@ -452,22 +467,25 @@ RooDataSet * beamSpotReweigh(RooDataSet *data0 /*original dataset*/){
 }
 
 RooDataSet * intLumiReweigh(RooDataSet *data0 /*original dataset*/){
-		
+  
   double factor = newIntLumi_/originalIntLumi_; // newIntLumi expressed in 1/fb
-
+  
   if (verbose_) std::cout << "[INFO] Was able to access IntLumi directlly from WS. IntLumi " << intLumi_->getVal() << "pb^{-1}" << std::endl;
-	
+  
   if (verbose_) std::cout << "[INFO] Old int lumi " << originalIntLumi_  <<", new int lumi " << newIntLumi_<< std::endl;
   if (verbose_) std::cout << "[INFO] Changing weights of dataset by a factor " << factor << " as per newIntLumi option" << std::endl;
   
   RooDataSet *data = (RooDataSet*) data0->emptyClone();
-	RooRealVar *weight0 = new RooRealVar("weight","weight",-100000,1000000);
+  RooRealVar *weight0 = new RooRealVar("weight","weight",-100000,1000000);
+  std::cout<<"intLumiReweigh: dataset "<<data0->GetName()<<std::endl;
   for (int i = 0; i < data0->numEntries(); i++) {
     if (data0->get(i)->getRealValue("CMS_hgg_mass") > rangeLow && data0->get(i)->getRealValue("CMS_hgg_mass") < rangeHigh ){      
       mass_->setVal(data0->get(i)->getRealValue("CMS_hgg_mass"));
+      //      std::cout<<"intLumiReweigh: entry "<<i<<", CMS_hgg_mass = "<<data0->get(i)->getRealValue("CMS_hgg_mass")<<std::endl;
       dZ_->setVal(data0->get(i)->getRealValue("dZ"));
+      procIndex_->setVal(data0->get(i)->getRealValue("processIndex"));
       weight0->setVal(factor * data0->weight() ); // <--- is this correct?
-      data->add( RooArgList(*mass_, *dZ_, *weight0), weight0->getVal() );
+      data->add( RooArgList(*mass_, *dZ_, *procIndex_, *weight0), weight0->getVal() );
     }
   }
   if (verbose_) std::cout << "[INFO] Old dataset (before intLumi change): " << *data0 << std::endl;
@@ -477,63 +495,69 @@ RooDataSet * intLumiReweigh(RooDataSet *data0 /*original dataset*/){
 }
 
 bool skipMass(int mh){
-	for (vector<int>::iterator it=skipMasses_.begin(); it!=skipMasses_.end(); it++) {
-		if (*it==mh) return true;
-	}
-	return false;
+  for (vector<int>::iterator it=skipMasses_.begin(); it!=skipMasses_.end(); it++) {
+    if (*it==mh) return true;
+  }
+  return false;
 }
 
 int main(int argc, char *argv[]){
-
+  
   int   minNevts    = 500; // if below minNevts #gauss = -1  //deflaut is ggh UntaggedTag3
-
+  
   double  minConditions = 60.0; //(1 - suwNegW/datasetW)*numEntries : if below, the dataset is too unstable (due to neg weights) to be fitted, replace with empty one
-
+  
   // Bins for fitting
   int nBinsFit_ = 160; //  //deflaut is ggh UntaggedTag3MDDB make it a parameter
   
-
+  
   gROOT->SetBatch();
-
+  
   OptionParser(argc,argv);
-
+  
   TStopwatch sw;
   sw.Start();
-
+  
   // reference details for low stats cats
   // need to make this configurable ?! -LC
   referenceProc_="ggh";
   if( !(optReferenceProc_.empty()) ){
     referenceProc_ = optReferenceProc_;
   }
+  std::cout<<"referenceProc_ "<<referenceProc_<<std::endl;
   //  referenceProcTTH_="tth"; // MDDB
   //  referenceTagWV_="UntaggedTag_2"; // histest stats WV is ggh Untagged 3. 
-
-  referenceProcDifferential_	= "InsideAcceptance_genPt_45.0to85.0";
+  
+  referenceProcDifferential_	= "InsideAcceptance_genPt_45p0_85p0";
   if( !(optReferenceProcDifferential_.empty()) ){
     referenceProcDifferential_ = optReferenceProcDifferential_;
   }
   
   ////  referenceTagWV_="SigmaMpTTag_1_recoPt_45.0to85.0"; // histest stats WV is ggh Untagged 3. 
   //  referenceTagWV_="SigmaMpTTag_1_recoPt_125.0to200.0"; // histest stats WV is ggh Untagged 3. 
-  referenceTagWV_="SigmaMpTTag_1_recoPt_45.0to85.0"; 
+  referenceTagWV_="recoPt_45p0_85p0_SigmaMpTTag_1"; 
   if ( !(optReferenceTagWV_.empty()) ){
     referenceTagWV_ = optReferenceTagWV_;
   }
 
+  referenceProcWV_= "InsideAcceptance_genPt_45p0_85p0";
+  if ( !(optReferenceProcWV_.empty()) ){
+    referenceProcWV_ = optReferenceProcWV_;
+  }
+  
   //  referenceTagWV_="SigmaMpTTag_1"; // histest stats WV is ggh Untagged 3. 
   //  referenceTagRV_="UntaggedTag_2"; // fairly low resolution tag even for ggh, more approprioate as te default than re-using the original tag.
-
-
+  
+  
   ////  referenceTagRV_="SigmaMpTTag_1_recoPt_45.0to85.0"; // fairly low resolution tag even for ggh, more approprioate as te default than re-using the original tag.
   //  referenceTagRV_="SigmaMpTTag_1_recoPt_125.0to200.0"; // fairly low resolution tag even for ggh, more approprioate as te default than re-using the original tag.
-  referenceTagRV_="SigmaMpTTag_1_recoPt_45.0to85.0";
-
-  referenceTagDifferential_	= "SigmaMpTTag_1_recoPt_45.0to85.0";
+  referenceTagRV_="recoPt_45p0_85p0_SigmaMpTTag_1";
+  
+  referenceTagDifferential_	= "recoPt_45p0_85p0_SigmaMpTTag_1";
   if( !(optReferenceTagDifferential_.empty()) ){
     referenceTagDifferential_ = optReferenceTagDifferential_;
   }
-
+  
   // are WV which needs to borrow should be taken from here
   
   // isFlashgg should now be the only option.
@@ -546,7 +570,7 @@ int main(int argc, char *argv[]){
   
   // open sig file
   //TFile *inFile = TFile::Open(filename_[0].c_str());
-
+  
   // print out nEvents per proc/tag etc...
   if (checkYields_){	  
     //    WSTFileWrapper * inWS0 = new WSTFileWrapper(filenameStr_,"tagsDumper/cms_hgg_13TeV");
@@ -558,12 +582,12 @@ int main(int argc, char *argv[]){
       RooDataSet *dataset = dynamic_cast<RooDataSet *>( *iterator );
       if (dataset) {
 	std::cout << "dataset / numEntries / sumEntries " <<  dataset->GetName() << " , " << dataset->sumEntries() << " , " << dataset->numEntries() << std::endl;
-
+	
       }
     }
     return 1;
   }
-
+  
   //time to open the signal file for the main script!
   WSTFileWrapper *inWS;
   if (isFlashgg_){
@@ -580,7 +604,7 @@ int main(int argc, char *argv[]){
     std::cout << "[ERROR] script is only compatible with flashgg! exit(1)." << std::endl;
     exit(1);
   }
-
+  
   if (inWS) { 
     if (verbose_)  std::cout << "[INFO] Workspace opened correctly" << std::endl;
   } else { 
@@ -596,14 +620,18 @@ int main(int argc, char *argv[]){
   dZ_->setMin(-25.0);
   dZ_->setMax(25.0);
   dZ_->setBins(100);
+  procIndex_ = (RooRealVar*)inWS->var("processIndex");
+  procIndex_->setMin(10);
+  procIndex_->setMax(15);
+  procIndex_->setBins(5);
   //intLumi_ = (RooRealVar*)inWS->var("IntLumi"); // **** #### fix IntLumi in ws! ### ****
   intLumi_ = new RooRealVar("IntLumi","IntLumi", 1000.0);
   intLumi_->setConstant(); 
-    
+  
   originalIntLumi_ = (intLumi_->getVal());// specify in 1/pb 
   newIntLumi_ = newIntLumi_*1000; // specify in 1/pb instead of 1/fb.
   intLumi_->setVal(newIntLumi_); //fix IntLumi in ws!
-
+  
   //RooRealVar *weight = (RooRealVar*)inWS->var("weight:weight");
   if( mass_ && dZ_ && intLumi_){
     if (verbose_) std::cout << "[INFO] RooRealVars mass, intL and dZ, found ? " << mass_ << ", " << intLumi_  << ", "<< dZ_<<  std::endl; 
@@ -629,12 +657,12 @@ int main(int argc, char *argv[]){
   if (verbose_) std::cout << "[INFO] preparing outfile "<< outfilename_<< std::endl;
   TFile *outFile = new TFile(outfilename_.c_str(),"RECREATE");
   RooWorkspace *outWS;
-
+  
   if (isFlashgg_) outWS = new RooWorkspace("wsig_13TeV");
-	
+  
   RooWorkspace *mergeWS = 0;
   TFile *mergeFile = 0;
-	
+  
   // maybe this is no longer needed ? -LC
   if(!mergefilename_.empty()) {
     mergeFile = TFile::Open(mergefilename_.c_str());
@@ -648,12 +676,12 @@ int main(int argc, char *argv[]){
   //splines for RV/WV
   clonemap_t cloneSplinesMapRV;
   clonemap_t cloneSplinesMapWV;
-
+  
   // make the output dir
   system(Form("mkdir -p %s/initialFits",plotDir_.c_str()));
   system("mkdir -p dat/in");
   parmap_t allParameters;
-
+  
   // Prepare the list of <proc> <tag> <nRV> <nWV> entries
   ifstream datfile;
   datfile.open(datfilename_.c_str());
@@ -661,7 +689,7 @@ int main(int argc, char *argv[]){
     std::cerr << "[ERROR] Could not open " << datfilename_ <<std::endl;
     exit(1);
   }
-
+  
   if (verbose_) std::cout << "[INFO] openign dat file "<< datfile<< std::endl;
   //loop over it 
   while (datfile.good()){
@@ -687,7 +715,7 @@ int main(int argc, char *argv[]){
     cout << " MDDB initial string "  ;
     for (int i = 0 ;i <  els.size() ; ++i) cout << els[i] << " " ;
     cout << endl;
-
+    
     if( els.size()==6 ) { // in this case you have specified a replacement tag!
       cout << " MDDB REPLACEMENT TAG ! : proc = " << proc << " cat =  " << cat  << endl;
       replaceWith_rv_ = make_pair(els[4],els[5]); // proc, cat
@@ -729,15 +757,26 @@ int main(int argc, char *argv[]){
 	// not implemented yet
       } else if (cat.compare(0,2,"WH") ==0){
 	// not implemented yet
-      } else if (cat.compare(0,6,"SigmaM") ==0){
-
+	////      } else if (cat.compare(0,6,"SigmaM") ==0){
+      } else if (cat.find("SigmaM")){
+	
 	//	replaceWith_ = make_pair(referenceProcDifferential_, referenceTagDifferential_ ); // proc, cat  //VRT, debug replacements
 	//	replace_ = true;                                                                                //VRT, debug replacements
-
+	
 	map_replacement_proc_rv_.push_back(referenceProcDifferential_);
 	map_replacement_cat_rv_.push_back(referenceTagDifferential_);
-	map_replacement_proc_wv_.push_back(referenceProcDifferential_);
-	map_replacement_cat_wv_.push_back(referenceTagDifferential_);
+	if( optReferenceProcWV_ != ""){
+	  map_replacement_proc_wv_.push_back(referenceProcWV_);
+	}
+	else{
+	  map_replacement_proc_wv_.push_back(referenceProcDifferential_);
+	}
+	if( optReferenceTagWV_ != ""){
+	  map_replacement_cat_wv_.push_back(referenceTagWV_);
+	}
+	else{
+	  map_replacement_cat_wv_.push_back(referenceTagDifferential_);
+	}
 	cout << " MDDB USE DIFFERENTIAL REPLACEMENTS: proc = " << referenceProcDifferential_ << " cat =  " << referenceTagDifferential_  << endl;      
       }
       else{
@@ -748,7 +787,7 @@ int main(int argc, char *argv[]){
 	map_replacement_cat_wv_.push_back(cat);
 	cout << " MDDB USE STD GGH REPLACEMENTS: proc = " << referenceProcGGH_ << " cat =  " << cat  << endl;      
       }
-
+      
       //MDDB       // if no replacement is speficied, use defaults
       //MDDB       if (cat.compare(0,3,"TTH") ==0){
       //MDDB 	// if the cat starts with TTH, use TTH reference process.
@@ -777,8 +816,8 @@ int main(int argc, char *argv[]){
     map_nG_rv_.push_back(nGaussiansRV);
     map_nG_wv_.push_back(nGaussiansWV);
   }
-
-
+  
+  
   // MDDB 
   cout << "MDDB see what's inside " <<  endl;
   cout << "map_proc" << endl;
@@ -794,7 +833,7 @@ int main(int argc, char *argv[]){
     cout << map_replacement_proc_wv_[i] << " " ;
     cout << map_replacement_cat_wv_[i] << endl;
   }
-
+  
   bool offDiagonal=0;
   // now start the proper loop, so loop over teh maps we filled above.
   for (unsigned int iLine = 0 ; iLine < map_proc_.size() ; iLine++){
@@ -813,13 +852,24 @@ int main(int argc, char *argv[]){
       std::cout<<"splitCat "<<splitCat<<std::endl;
       std::vector<std::string > splitBinFromProc;
       split(splitBinFromProc, splitProc, boost::is_any_of("_"));
+      std::string binFromProc = "";
+      if(splitBinFromProc.size()>3){ //typical structure process_genvar_binL_binH
+	binFromProc = splitBinFromProc[2]+"_"+splitBinFromProc[3];
+      }
       std::cout << "bin name from proc " << splitBinFromProc.back() << std::endl;
+      std::cout << "bin name from proc " << binFromProc << std::endl;
       std::vector<std::string > splitBinFromCat;
       split(splitBinFromCat, splitCat, boost::is_any_of("_"));
+      std::string binFromCat = "";
+      if(splitBinFromCat.size()>2){ //typical structure recovar_binL_binH_sigmaM_catN
+	binFromCat = splitBinFromCat[1]+"_"+splitBinFromCat[2];
+      }
       std::cout << "bin name from cat " << splitBinFromCat.back() << std::endl;
+      std::cout << "bin name from cat " << binFromCat << std::endl;
       //      if(splitBinFromProc.size()!=0 && splitBinFromCat.size()!=0){
       if(splitBinFromProc.size()>1 && splitBinFromCat.size()>1){ //at least two elements, the split has to be happened (OutsideAcceptance --> 1 el., InsideAcceptance_blabla --> 2 el.)
-	offDiagonal =  !(splitBinFromProc.back().compare(splitBinFromCat.back())==0);
+	//	offDiagonal =  !(splitBinFromProc.back().compare(splitBinFromCat.back())==0);
+	offDiagonal =  !(binFromProc.compare(binFromCat)==0);
 	if(offDiagonal){
 	  std::cout << "bin from proc and name do not match, so this is an off-diagonal process!" << std::endl;
 	}
@@ -829,7 +879,7 @@ int main(int argc, char *argv[]){
       if(proc.find("OutsideAcceptance") != std::string::npos ){
 	shiftOffDiag_ = false;
       }
-
+      
       if (verbose_) std::cout << " [INFO] check if this proc " << proc << " matches splitProc " << splitProc << ": "<< (proc.compare(splitProc)==0) << std::endl; 
       if ( proc.compare(splitProc) == 0 ) {
         if (verbose_) std::cout << " [INFO] --> proc matches! Check if this cat " << cat  << " matches splitCat " << splitCat<< ": " << (cat.compare(splitCat)==0) <<  std::endl; 
@@ -847,7 +897,7 @@ int main(int argc, char *argv[]){
     }
     bool userSkipRV = (nGaussiansRV==-1);
     bool userSkipWV = (nGaussiansWV==-1);
-
+    
     cout << "-----------------------------------------------------------------" << endl;
     cout << Form("[INFO] Running fits for proc:%s - cat:%s with nGausRV:%d nGausWV:%d",proc.c_str(),cat.c_str(),nGaussiansRV,nGaussiansWV) << endl;
     //if( replace_ ) { cout << Form("Will replace parameters using  proc:%s - cat:%d",replaceWith_.first.c_str(),replaceWith_.second) << endl; }
@@ -863,42 +913,56 @@ int main(int argc, char *argv[]){
     
     bool isProblemCategory =false;
     bool isToSkip =false;
-
-
+    
     //these flags make sure the replacement happens for all mass points if only one falls below threshold
     bool tooFewEntriesRV=false;
     bool tooFewEntriesWV=false;
     bool negSumEntriesRV=false;
     bool negSumEntriesWV=false;
-
+    
     bool belowMinConditionsRV=false;
     bool belowMinConditionsWV=false;
-
+    
     double WVoverRVat125 = 0.;
-
+    
     for (int mh=mhLow_; mh<=mhHigh_; mh+=5){
       std::cout << "First, check if at least at one of the mass points the number of entries is too low"<<std::endl;
       if (skipMass(mh)) continue;
       RooDataSet *dataRV; 
       RooDataSet *dataWV; 
       RooDataSet *data;  
-            
-      if (verbose_)std::cout << "[INFO] Opening dataset called "<< Form("%s_%d_13TeV_%s",proc.c_str(),mh,cat.c_str()) << " in in WS " << inWS << std::endl;
-      RooDataSet *data0   = reduceDataset((RooDataSet*)inWS->data(Form("%s_%d_13TeV_%s",proc.c_str(),mh,cat.c_str())));
+
+      //VRT 16.05.17: attempt to adapt to differentials naming convenction
+      string proctemp = proc;
+      string procWmassAndE;
+      if(proctemp.find_first_of("_") != string::npos){
+	procWmassAndE = proctemp.insert(proctemp.find_first_of("_"), Form("_%d_13TeV", mh) );
+      }
+      else{
+	procWmassAndE = proctemp.append( Form("_%d_13TeV", mh) );
+      }
+      
+      
+      //      if (verbose_)std::cout << "[INFO] Opening dataset called "<< Form("%s_%d_13TeV_%s",proc.c_str(),mh,cat.c_str()) << " in in WS " << inWS << std::endl;
+      //      RooDataSet *data0   = reduceDataset((RooDataSet*)inWS->data(Form("%s_%d_13TeV_%s",proc.c_str(),mh,cat.c_str())));
+
+      if (verbose_)std::cout << "[INFO] Opening dataset called "<< Form("%s_%s",procWmassAndE.c_str(),cat.c_str()) << " in in WS " << inWS << std::endl;
+      RooDataSet *data0   = reduceDataset((RooDataSet*)inWS->data(Form("%s_%s",procWmassAndE.c_str(),cat.c_str())));
+
       if (beamSpotReweigh_){
 	data = beamSpotReweigh(intLumiReweigh(data0));
       } else {
 	data = intLumiReweigh(data0);
       }
       if (verbose_) std::cout << "[INFO] Old dataset (before intLumi change): " << *data0 << std::endl;
-
+      
       dataRV = rvwvDataset(data,"RV"); 
       dataWV = rvwvDataset(data,"WV"); 
       
       if (verbose_) std::cout << "[INFO] Datasets ? " << *data << std::endl;
       if (verbose_) std::cout << "[INFO] Datasets (right vertex) ? " << *dataRV << std::endl;
       if (verbose_) std::cout << "[INFO] Datasets (wrong vertex) ? " << *dataWV << std::endl;
-        
+      
       float nEntriesRV =dataRV->numEntries();
       std::cout << "RV numEntries " << nEntriesRV << std::endl;
       float sEntriesRV= dataRV->sumEntries();
@@ -907,7 +971,7 @@ int main(int argc, char *argv[]){
       std::cout << "WV numEntries " << nEntriesWV << std::endl;
       float sEntriesWV= dataWV->sumEntries(); // count the number of entries and total weight on the RV/WV datasets
       std::cout << "WV sumEntries " << sEntriesWV << std::endl;
-
+      
       //find problematic categories
       if(mh==125){
 	if(sEntriesWV !=0){
@@ -968,10 +1032,10 @@ int main(int argc, char *argv[]){
       std::cout<<"negSumEntriesWV "<<negSumEntriesWV<<std::endl;
     }
     
-
-
-
-  
+    
+    
+    
+    
     for (int mh=mhLow_; mh<=mhHigh_; mh+=5){
       if (skipMass(mh)) continue;
       RooDataSet *dataRV; 
@@ -983,22 +1047,36 @@ int main(int argc, char *argv[]){
       RooDataSet *data;  
       RooDataHist *dataH;   // MDDB not used
 
-      if (verbose_)std::cout << "[INFO] Opening dataset called "<< Form("%s_%d_13TeV_%s",proc.c_str(),mh,cat.c_str()) << " in in WS " << inWS << std::endl;
-      RooDataSet *data0   = reduceDataset((RooDataSet*)inWS->data(Form("%s_%d_13TeV_%s",proc.c_str(),mh,cat.c_str())));
+      //VRT 16.05.17: attempt to adapt to differentials naming convenction
+      string proctemp = proc;
+      string procWmassAndE;
+      if(proctemp.find_first_of("_") != string::npos){
+	procWmassAndE = proctemp.insert(proctemp.find_first_of("_"), Form("_%d_13TeV", mh) );
+      }
+      else{
+	procWmassAndE = proctemp.append( Form("_%d_13TeV", mh) );
+      }
+      
+      if (verbose_)std::cout << "[INFO] Opening dataset called "<< Form("%s_%s",procWmassAndE.c_str(),cat.c_str()) << " in in WS " << inWS << std::endl;
+      RooDataSet *data0   = reduceDataset((RooDataSet*)inWS->data(Form("%s_%s",procWmassAndE.c_str(),cat.c_str())));
+
+      //      if (verbose_)std::cout << "[INFO] Opening dataset called "<< Form("%s_%d_13TeV_%s",proc.c_str(),mh,cat.c_str()) << " in in WS " << inWS << std::endl;
+      //      RooDataSet *data0   = reduceDataset((RooDataSet*)inWS->data(Form("%s_%d_13TeV_%s",proc.c_str(),mh,cat.c_str())));
+
       if (beamSpotReweigh_){
 	data = beamSpotReweigh(intLumiReweigh(data0));
       } else {
 	data = intLumiReweigh(data0);
       }
       if (verbose_) std::cout << "[INFO] Old dataset (before intLumi change): " << *data0 << std::endl;
-
+      
       dataRV = rvwvDataset(data,"RV"); 
       dataWV = rvwvDataset(data,"WV"); 
-
+      
       if(negSumEntriesWV){
 	dataWV = (RooDataSet*) dataWV->emptyClone()->reduce(RooArgSet(*mass_, *dZ_));
       }
-
+      
       // // BASIC CHECK
       // if (mh == 125) {
       // 	for (unsigned int i=0 ; i < dataRV->numEntries() ; i++){	
@@ -1014,7 +1092,7 @@ int main(int argc, char *argv[]){
       if (verbose_) std::cout << "[INFO] Datasets ? " << *data << std::endl;
       if (verbose_) std::cout << "[INFO] Datasets (right vertex) ? " << *dataRV << std::endl;
       if (verbose_) std::cout << "[INFO] Datasets (wrong vertex) ? " << *dataWV << std::endl;
-        
+      
       float nEntriesRV =dataRV->numEntries();
       std::cout << "RV numEntries " << nEntriesRV << std::endl;
       float sEntriesRV= dataRV->sumEntries();
@@ -1023,7 +1101,7 @@ int main(int argc, char *argv[]){
       std::cout << "WV numEntries " << nEntriesWV << std::endl;
       float sEntriesWV= dataWV->sumEntries(); // count the number of entries and total weight on the RV/WV datasets
       std::cout << "WV sumEntries " << sEntriesWV << std::endl;
-
+      
       // if there are few atcual entries or if there is an  overall negative sum of weights...
       // or if it was specified that one should use the replacement dataset, then need to replace!
       //      if (nEntriesRV <   minNevts  || sEntriesRV < 0 || ( userSkipRV) || offDiagonal ){
@@ -1034,7 +1112,7 @@ int main(int argc, char *argv[]){
 	if( belowMinConditionsRV ) isToSkip=true;
 	std::cout<<"proc, cat: "<<proc<<", "<<cat<<std::endl;
 	int thisProcCatIndex = getIndexOfReferenceDataset(proc,cat);
-          
+        
 	string replancementProc = map_replacement_proc_rv_[thisProcCatIndex];
 	string replancementCat = map_replacement_cat_rv_[thisProcCatIndex];
 	std::cout<<"repl proc, repl cat: "<<replancementProc<<", "<<replancementCat<<std::endl;
@@ -1043,12 +1121,24 @@ int main(int argc, char *argv[]){
 	std::cout << "[INFO] try to use  dataset for " << replancementProc << ", " << replancementCat << " instead."<< std::endl;
 	//pick the dataset for the replacement proc and cat, reduce it (ie remove pdfWeights etc) ,
 	//reweight for lumi, and then get the RV events only.
+
+	string replproctemp = replancementProc;
+	string replprocWmassAndE;
+	if(replproctemp.find_first_of("_") != string::npos){
+	  replprocWmassAndE = replproctemp.insert(replproctemp.find_first_of("_"), Form("_%d_13TeV", mh) );
+	}
+	else{
+	  replprocWmassAndE = replproctemp.append( Form("_%d_13TeV", mh) );
+	}
+
 	if(beamSpotReweigh_){
+
 	  data0Ref   = beamSpotReweigh(
 				       rvwvDataset(
 						   intLumiReweigh(
 								  reduceDataset(
-										(RooDataSet*)inWS->data(Form("%s_%d_13TeV_%s",replancementProc.c_str(),mh,replancementCat.c_str()))
+										//										(RooDataSet*)inWS->data(Form("%s_%d_13TeV_%s",replancementProc.c_str(),mh,replancementCat.c_str()))
+										(RooDataSet*)inWS->data(Form("%s_%s",replprocWmassAndE.c_str(),replancementCat.c_str()))
 										)
 								  ), "RV"
 						   )
@@ -1056,12 +1146,13 @@ int main(int argc, char *argv[]){
 	  
 	} else {
 	  data0Ref   = rvwvDataset(
-				 intLumiReweigh(
-						reduceDataset(
-							      (RooDataSet*)inWS->data(Form("%s_%d_13TeV_%s",replancementProc.c_str(),mh,replancementCat.c_str()))
-							      )
-						), "RV"
-				 );
+				   intLumiReweigh(
+						  reduceDataset(
+								//		(RooDataSet*)inWS->data(Form("%s_%d_13TeV_%s",replancementProc.c_str(),mh,replancementCat.c_str()))
+		(RooDataSet*)inWS->data(Form("%s_%s",replprocWmassAndE.c_str(),replancementCat.c_str()))
+								)
+						  ), "RV"
+				   );
 	}
 	if (data0Ref) {
 	  std::cout << "[INFO] Found replacement dataset for RV:" << *data0Ref<< std::endl;
@@ -1069,15 +1160,15 @@ int main(int argc, char *argv[]){
 	  std::cout << "[ERROR] could not find replacement dataset for RV... " <<  std::endl;
 	  exit(1);
 	}
-
+	
 	dataRVRef=(RooDataSet*) data0Ref->Clone();
 	std::cout << "[INFO] RV: replacing dataset for FITTING with new one ("<< *dataRVRef <<"), but keeping name of "<< *data0 << std::endl;
 	dataRVRef->SetName(data0->GetName()); // MDDB why this was commented out ?
       } else { // if the dataset was fine to begin with, make the reference dataset the original
 	dataRVRef=(RooDataSet*) dataRV->Clone();
       }
-        
-          
+      
+      
       // if there are few atcual entries or if there is an  overall negative sum of weights...
       // or if it was specified that one should use the replacement dataset, then need to replace!
       //      if (nEntriesWV < minNevts || sEntriesWV < 0 || (userSkipWV)){
@@ -1102,13 +1193,25 @@ int main(int argc, char *argv[]){
         
 	//pick the dataset for the replacement proc and cat, reduce it (ie remove pdfWeights etc) ,
 	//reweight for lumi and then get the WV events only.
+
+	string replproctemp = replancementProc;
+	string replprocWmassAndE;
+	if(replproctemp.find_first_of("_") != string::npos){
+	  replprocWmassAndE = replproctemp.insert(replproctemp.find_first_of("_"), Form("_%d_13TeV", mh) );
+	}
+	else{
+	  replprocWmassAndE = replproctemp.append( Form("_%d_13TeV", mh) );
+	}
+	
 	if (beamSpotReweigh_){
+
 	  data0Ref   = beamSpotReweigh( 
 				       rvwvDataset(
 						   intLumiReweigh(
 								  reduceDataset(
 										//	(RooDataSet*)inWS->data(Form("%s_%d_13TeV_%s",referenceProcWV_.c_str(),mh,referenceTagWV_.c_str()))
-										(RooDataSet*)inWS->data(Form("%s_%d_13TeV_%s",replancementProc.c_str(),mh,replancementCat.c_str()))
+										//										(RooDataSet*)inWS->data(Form("%s_%d_13TeV_%s",replancementProc.c_str(),mh,replancementCat.c_str()))
+										(RooDataSet*)inWS->data(Form("%s_%s",replprocWmassAndE.c_str(),replancementCat.c_str()))
 										)
 								  ), "WV"
 						   )
@@ -1118,7 +1221,8 @@ int main(int argc, char *argv[]){
 				   intLumiReweigh(
 						  reduceDataset(
 								//(RooDataSet*)inWS->data(Form("%s_%d_13TeV_%s",referenceProcWV_.c_str(),mh,referenceTagWV_.c_str()))
-								(RooDataSet*)inWS->data(Form("%s_%d_13TeV_%s",replancementProc.c_str(),mh,replancementCat.c_str()))
+								//(RooDataSet*)inWS->data(Form("%s_%d_13TeV_%s",replancementProc.c_str(),mh,replancementCat.c_str()))
+(RooDataSet*)inWS->data(Form("%s_%s",replprocWmassAndE.c_str(),replancementCat.c_str()))
 								)
 						  ), "WV"
 				   );
@@ -1129,15 +1233,15 @@ int main(int argc, char *argv[]){
 	  std::cout << "[ERROR] could not find replacement dataset for WV... " <<  std::endl;
 	  exit(1);
 	}
-
+	
 	dataWVRef = (RooDataSet*) data0Ref->Clone();
 	std::cout << "[INFO] WV: replacing dataset for FITTING with new one ("<< *dataWVRef <<"), but keeping name of "<< *data0 << std::endl;
 	dataWVRef->SetName(data0->GetName()); // MDDB why this was commented out ?
       } else {
 	dataWVRef=(RooDataSet*) dataWV->Clone();
       }
-
-
+      
+      
       if (verbose_) std::cout << "[INFO] inserting regular RV dataset " << *dataRV<< std::endl;
       datasetsRV.insert(pair<int,RooDataSet*>(mh,dataRV));
       if (verbose_) std::cout << "[INFO] inserting regular WV datasets " << *dataWV<< std::endl;
@@ -1156,8 +1260,10 @@ int main(int argc, char *argv[]){
     for (std::map<int,RooDataSet*>::iterator it=FITdatasetsRV.begin(); it!=FITdatasetsRV.end(); ++it){
       if (check=="") {
 	TString name=it->second->GetName();
+	std::cout<<"print fitdatasetsrv "<<std::endl;
+	it->second->Print();
 	cout << "MDDB check RV name " << name << endl; 
-
+	
 	//	check = name.ReplaceAll(TString(Form("%d",it->first)),TString(""));
 	//	b.Replace(b.Index("125",3),3,"",0)
 	check = name.Replace(name.Index( Form("%d_",it->first), 5 ), 3, "", 0  );
@@ -1187,7 +1293,8 @@ int main(int argc, char *argv[]){
     if (verbose_) std::cout << "[INFO] preapraing initialfit RV" << std::endl;
     mass_->Print();
     MH->Print() ;
-  
+    std::cout<<"data125 mean in signalfit.cpp "<<FITdatasetsRV[125]->mean(*mass_)<<std::endl;
+    std::cout<<"binned data125 mean in signalfit.cpp "<<FITdatasetsRV[125]->binnedClone(Form("%s_binned",FITdatasetsRV[125]->GetName()) )->mean(*mass_)<<std::endl;
     InitialFit initFitRV(mass_,MH,mhLow_,mhHigh_,skipMasses_,binnedFit_,nBinsFit_); //     InitialFit initFitRV(mass_,MH,mhLow_,mhHigh_,skipMasses_,binnedFit_,nBins_);
     initFitRV.setVerbosity(verbose_);
     if (!cloneFits_) {
@@ -1202,7 +1309,7 @@ int main(int argc, char *argv[]){
       if (verbose_) std::cout << "[INFO] Replace? " << replace_ << std::endl;
       initFitRV.runFits(ncpu_);
       //      if (!runInitialFitsOnly_ && !replace_) { //are we sure replace_ is just not obsolete?
-
+      
       if (!runInitialFitsOnly_ ) { 
 	if(verbose_) std::cout<<"[INFO] Writing to file dat/in_"<<proc.c_str()<<"_"<<cat.c_str()<<"_rv.dat initial parameters"<<std::endl;
         initFitRV.saveParamsToFileAtMH(Form("dat/in_%s_%s_rv.dat",proc.c_str(),cat.c_str()),constraintValueMass_);
@@ -1215,9 +1322,9 @@ int main(int argc, char *argv[]){
 	  std::cout << "userSkipRV is " << userSkipRV <<" and offDiagonal is " << offDiagonal <<", so after fitting we shift dm by the scale bias" << std::endl;
 	  initFitRV.shiftScale();	
 	}
-
+	
       }
-
+      
       if( replace_ ) {
         initFitRV.setFitParams(allParameters[replaceWith_rv_].first); 
       }
@@ -1233,9 +1340,9 @@ int main(int argc, char *argv[]){
     if (verbose_) std::cout << "[INFO] preparing initialfit WV" << std::endl;
     mass_->Print();
     MH->Print() ;
-
+    
     InitialFit initFitWV(mass_,MH,mhLow_,mhHigh_,skipMasses_,binnedFit_,nBinsFit_); //     InitialFit initFitWV(mass_,MH,mhLow_,mhHigh_,skipMasses_,binnedFit_,nBins_);
-
+    
     initFitWV.setVerbosity(verbose_);
     if (!cloneFits_) {
       if (verbose_) std::cout << "[INFO] WV building sum of gaussians wth nGaussiansWV "<< nGaussiansWV << std::endl;
@@ -1243,10 +1350,10 @@ int main(int argc, char *argv[]){
       if (verbose_) std::cout << "[INFO] WV setting datasets in initial FIT " << std::endl;
       initFitWV.setDatasets(FITdatasetsWV);
       initFitWV.setDatasetsSTD(datasetsWV);
-
+      
       if (verbose_) cout << "[INFO] fit setup: mhLow = " << mhLow_ << " ; mhHigh = " << mhHigh_ << " ; binned = " << binnedFit_ << " ; nBinsFit = " << nBinsFit_ << endl;      
       initFitWV.runFits(ncpu_);
-
+      
       //      if (!runInitialFitsOnly_ && !replace_) {
       if (!runInitialFitsOnly_) {
 	if(verbose_) std::cout<<"[INFO] Writing to file dat/in_"<<proc.c_str()<<"_"<<cat.c_str()<<"_wv.dat initial parameters"<<std::endl;
@@ -1270,7 +1377,7 @@ int main(int argc, char *argv[]){
     //MDDB save params to check that the gaussian parameters are the same as the ones found in SignalFit
     cout << "MDDB save parameters WV "  << endl; 
     initFitWV.saveParamsToFileAtMH(Form("%s/../SigFit_params/SigFit_params_WV_proc_%s_cat_%s_g%d.txt",plotDir_.c_str() , proc.c_str(), cat.c_str(), nGaussiansWV),125);
-
+    
     parlist_t fitParamsWV = initFitWV.getFitParams();
     
     allParameters[ make_pair(proc,cat) ] = make_pair(fitParamsRV,fitParamsWV);
@@ -1327,7 +1434,7 @@ int main(int argc, char *argv[]){
         if( isFlashgg_){
           finalModel.buildRvWvPdf("hggpdfsmrel_13TeV",nGaussiansRV,nGaussiansWV,recursive_);
         }
-        finalModel.getNormalization();
+        finalModel.getNormalization(normalisationCut_);
         if (!skipPlots_) finalModel.plotPdf(plotDir_);
         finalModel.save(outWS);
       }
@@ -1339,7 +1446,7 @@ int main(int argc, char *argv[]){
   cout << "[INFO] Whole fitting process took..." << endl;
   cout << "\t";
   sw.Print();
-
+  
   if (!runInitialFitsOnly_) { 
     sw.Start();
     cout << "[INFO] Starting to combine fits..." << endl;
@@ -1365,7 +1472,7 @@ int main(int argc, char *argv[]){
   //	inFile->Close();
   inWS->Close();
   cout << "[INFO] Done." << endl;
- 
+  
   
   return 0;
 }

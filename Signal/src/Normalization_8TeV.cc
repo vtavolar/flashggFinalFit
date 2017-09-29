@@ -32,9 +32,10 @@ int Normalization_8TeV::Init(int sqrtS){
 	double valXSWH  =  (double)TPython::Eval(Form("buildSMHiggsSignalXSBR.getXS(%f,'%s')",mH,"WH"));
 	double valXSZH  =  (double)TPython::Eval(Form("buildSMHiggsSignalXSBR.getXS(%f,'%s')",mH,"ZH"));
 	std::cout<<"Here we read xsecs"<<std::endl;
-	std::cout<<valBR<<" "<<valXSggH + valXSqqH + valXSttH +valXSZH +valXSZH<<" "<<valXSggH<<" "<<valXSqqH<<" "<<valXSttH<<" "<<valXSWH<<" "<<valXSZH<<std::endl;
+	std::cout<<valBR<<" "<<valXSggH + valXSqqH + valXSttH +valXSWH +valXSZH<<" "<<valXSggH<<" "<<valXSqqH<<" "<<valXSttH<<" "<<valXSWH<<" "<<valXSZH<<std::endl;
 	BranchingRatioMap[mH]	= valBR;
-        XSectionMap_all[mH]	= valXSggH + valXSqqH + valXSttH +valXSZH +valXSZH; 	
+        XSectionMap_all[mH]	= valXSggH + valXSqqH + valXSttH +valXSWH +valXSZH; 	
+        XSectionMap_hx[mH]	= valXSqqH + valXSttH +valXSWH +valXSZH; 	
         XSectionMap_ggh[mH]	= valXSggH; 	
         XSectionMap_vbf[mH]	= valXSqqH; 	
         XSectionMap_tth[mH]	= valXSttH; 	
@@ -144,11 +145,25 @@ TGraph * Normalization_8TeV::GetSigmaGraph(TString process)
 {
 	TGraph * gr = new TGraph();
 	std::map<double, double> * XSectionMap = 0 ;
-	if ( process == "ggh" || process == "ggH") {
-		XSectionMap = &XSectionMap_ggh;
-	} else if ( process.Contains("InsideAcceptance") || process.Contains("OutsideAcceptance")){
-	  	XSectionMap = &XSectionMap_all;
-	} else if ( process == "vbf" || process == "VBF" ) { // FIXME
+	if (process.Contains("ggh")  ) {
+	  std::cout<<"matching proc "<<process<<" to ggh"<<std::endl;
+	  XSectionMap = &XSectionMap_ggh;
+	} 
+	else if (process.Contains("hx") || process.Contains("hx")) {
+	  std::cout<<"matching proc "<<process<<" to hx"<<std::endl;
+	  XSectionMap = &XSectionMap_hx;
+	}
+	else if( ( process.Contains("outsideacceptance") || process.Contains("insideacceptance")  || process.Contains("OutsideAcceptance") || process.Contains("InsideAcceptance") ) && ! process.Contains("ggh") && ! process.Contains("hx")   ){
+	  std::cout<<"matching proc "<<process<<" to all"<<std::endl;
+	  XSectionMap = &XSectionMap_all;
+	}
+
+//	if ( process == "ggh" || process == "ggH") {
+//		XSectionMap = &XSectionMap_ggh;
+//	} else if ( process.Contains("InsideAcceptance") || process.Contains("OutsideAcceptance")){
+//	  	XSectionMap = &XSectionMap_all;
+//	}
+	else if ( process == "vbf" || process == "VBF" ) { // FIXME
 		XSectionMap = &XSectionMap_vbf;
 	} else if ( process == "vbfold") {
 		XSectionMap = &XSectionMap_vbfold;
@@ -168,7 +183,11 @@ TGraph * Normalization_8TeV::GetSigmaGraph(TString process)
 	}
 
 	for (std::map<double, double>::const_iterator iter = XSectionMap->begin();  iter != XSectionMap->end(); ++iter) {
-		gr->SetPoint(gr->GetN(),iter->first, iter->second );
+	  gr->SetPoint(gr->GetN(),iter->first, iter->second );
+	  std::cout<<gr->GetN()<<std::endl;
+	  std::cout<<iter->first<<std::endl;
+	  std::cout<<iter->second<<std::endl;
+
 	}
 
 	return gr;
@@ -214,7 +233,11 @@ double Normalization_8TeV::GetXsection(double mass, TString HistName) {
 
 	if (HistName.Contains("ggh")  ) {
 		XSectionMap = &XSectionMap_ggh;
-	} else if(HistName.Contains("outsideacceptance") || HistName.Contains("insideacceptance")  || HistName.Contains("OutsideAcceptance") || HistName.Contains("InsideAcceptance") ){
+	} 
+	else if (HistName.Contains("hx") || HistName.Contains("hx")) {
+		XSectionMap = &XSectionMap_hx;
+	}
+	else if( ( HistName.Contains("outsideacceptance") || HistName.Contains("insideacceptance")  || HistName.Contains("OutsideAcceptance") || HistName.Contains("InsideAcceptance") ) && ! HistName.Contains("ggh") && ! HistName.Contains("hx")   ){
 	  XSectionMap = &XSectionMap_all;
 	} else if (HistName.Contains("vbf") && !HistName.Contains("vbfold")) {
 		XSectionMap = &XSectionMap_vbf;
