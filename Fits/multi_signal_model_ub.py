@@ -53,13 +53,9 @@ os.chdir(str(directory))
 print "CURRENT FOLDER"
 os.system("pwd")
 
-#obs="pt"
 binmap=""
-##binmap="--PO 'map="
 for binm in observables[obs]["binsmap"]:
     binmap = str(binmap) + "--PO 'map="+str(binm)+"' "
-##    binmap = str(binmap) + str(binm)+","
-##binmap = binmap+"'"
 
 print binmap
 
@@ -76,22 +72,46 @@ if initialRs.endswith(","):
     initialRs = initialRs[:-1]
 print initialRs
 
-#os.system("combine -M MultiDimFit  --saveWorkspace -n "+str(observables[str(obs)]['BFname'])+" --setPhysicsModelParameters "+str(initialRs)+" -m 125 --minimizerStrategy 2 "+str(datacardRoot)) 
+
+blinded=1
+if blinded:
+    asimov = "combine -M MultiDimFit -t -1 --saveWorkspace -n asimov_fit --setPhysicsModelParameters "+str(initialRs)+" -m 125 --minimizerStrategy 2 "+str(datacardRoot)
+    print asimov
+    os.system(asimov)
+    print "mv higgsCombineasimov_fit.MultiDimFit.mH125.root "+str(dcpostfit)
+    os.system( "mv higgsCombineasimov_fit.MultiDimFit.mH125.root "+str(dcpostfit) )
+    generate = "combine  --setPhysicsModelParameters "+str(initialRs)+" -M GenerateOnly -n asimov_toy -m 125 --saveToys -t -1 --snapshotName MultiDimFit "+str(dcpostfit)
+    print generate
+    os.system(generate)
+    asimovBF = "combine  --setPhysicsModelParameters "+str(initialRs)+" -M MultiDimFit -n asimov_toy_best_fit -m 125 -t -1 --minimizerStrategy 2  --snapshotName MultiDimFit "+str(dcpostfit)
+    print asimovBF
+    os.system(asimovBF)
+
+
+else:
+    print "combine -M MultiDimFit  --saveWorkspace -n "+str(observables[str(obs)]['BFname'])+" --setPhysicsModelParameters "+str(initialRs)+" -m 125 --minimizerStrategy 2 "+str(datacardRoot)
+#    os.system("combine -M MultiDimFit  --saveWorkspace -n "+str(observables[str(obs)]['BFname'])+" --setPhysicsModelParameters "+str(initialRs)+" -m 125 --minimizerStrategy 2 "+str(datacardRoot)) 
 
 os.chdir("..")
 
 fitcommand=""
-fitcommand="bash fit_bins_ub.sh "+str(directory)+" higgsCombine"+str(observables[str(obs)]['BFname'])+".MultiDimFit.mH125.root 0 "+str(observables[str(obs)]['nbins']-1)+" "+str(observables[str(obs)]['npoints'])
+if blinded:
+    fitcommand="bash fit_bins.sh "+str(directory)+" "+str(dcpostfit)+" 0 "+str(observables[str(obs)]['nbins']-1)+" "+str(observables[str(obs)]['npoints'])
+else:
+    fitcommand="bash fit_bins_ub.sh "+str(directory)+" higgsCombine"+str(observables[str(obs)]['BFname'])+".MultiDimFit.mH125.root 0 "+str(observables[str(obs)]['nbins']-1)+" "+str(observables[str(obs)]['npoints'])
 
 print fitcommand
 
-#os.system(fitcommand)
+os.system(fitcommand)
 
 
 grepline="grep 'best fit' "
 for ib in range(observables[str(obs)]['nbins']):
-    print "python makeCombinePlots.py  -b -f "+str(directory)+"/higgsCombiner"+str(ib)+"_ub_np"+str(observables[str(obs)]['npoints'])+".MultiDimFit.mH120.root --mu --muExpr 'r"+str(ib)+"' -o "+str(directory)+"/scan_"+str(pattern)+"_r"+str(ib)+" | tee "+str(directory)+"/scan_"+str(pattern)+"_r"+str(ib)+".log" 
-    os.system(  "python makeCombinePlots.py  -b -f "+str(directory)+"/higgsCombiner"+str(ib)+"_ub_np"+str(observables[str(obs)]['npoints'])+".MultiDimFit.mH120.root --mu --muExpr 'r"+str(ib)+"' -o "+str(directory)+"/scan_"+str(pattern)+"_r"+str(ib)+" | tee "+str(directory)+"/scan_"+str(pattern)+"_r"+str(ib)+".log"  )
+    label=""
+    if not blinded:
+        label="ub"
+    print "python makeCombinePlots.py  -b -f "+str(directory)+"/higgsCombiner"+str(ib)+"_"+str(label)+"_np"+str(observables[str(obs)]['npoints'])+".MultiDimFit.mH120.root --mu --muExpr 'r"+str(ib)+"' -o "+str(directory)+"/scan_"+str(pattern)+"_r"+str(ib)+" | tee "+str(directory)+"/scan_"+str(pattern)+"_r"+str(ib)+".log" 
+    os.system(  "python makeCombinePlots.py  -b -f "+str(directory)+"/higgsCombiner"+str(ib)+"_"+str(label)+"_np"+str(observables[str(obs)]['npoints'])+".MultiDimFit.mH120.root --mu --muExpr 'r"+str(ib)+"' -o "+str(directory)+"/scan_"+str(pattern)+"_r"+str(ib)+" | tee "+str(directory)+"/scan_"+str(pattern)+"_r"+str(ib)+".log"  )
     grepline = grepline+str(directory)+"/scan_"+str(pattern)+"_r"+str(ib)+".log "
 grepline = grepline + " >> "+str(directory)+"/best_fit_"+str(obs)+".txt"
 os.system(grepline)
