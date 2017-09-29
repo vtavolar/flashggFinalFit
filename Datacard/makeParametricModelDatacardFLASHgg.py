@@ -290,7 +290,7 @@ if not options.statonly:
    theorySyst = {}
 ###   theorySyst['scaleWeight'] = [1,2,3,4,6,8,"replicas"] #5,7 unphysical
 ###   theorySyst['alphaSWeight'] = [0,1,"asym"]
-   theorySyst['pdfWeight'] = [0,60,"sym"]
+#######   theorySyst['pdfWeight'] = [0,60,"sym"]
    
    theorySystAbsScale={}
    theorySystAbsScale['names'] = ["QCDscale_qqbar_up","QCDscale_gg_up","QCDscale_qqbar_down","QCDscale_gg_down","pdf_alphaS_qqbar","pdf_alphaS_gg","pdf_qqbar","pdf_gg","alphaS_qqbar","alphaS_gg"] #QCD scale up, QCD scale down, PDF+alpha S, PDF, alpha S 
@@ -962,10 +962,23 @@ def getFlashggLine(proc,cat,syst):
 ###  dataDOWN =  inWS.data("%s_%d_13TeV_%s_%sDown01sigma"%(flashggProc[proc],options.mass,cat,syst)) # will exist if teh systematic is an asymetric uncertainty not strore as event weights
 ###  dataUP =  inWS.data("%s_%d_13TeV_%s_%sUp01sigma"%(flashggProc[proc],options.mass,cat,syst))# will exist if teh systematic is an asymetric uncertainty not strore as event weights
 ###  dataNOMINAL =  inWS.data("%s_%d_13TeV_%s"%(flashggProc[proc],options.mass,cat)) #Nominal RooDataSet,. May contain required weights if UP/DOWN/SYMMETRIC roodatahists do not exist (ie systematic stored as event weigths)
-  dataSYMMETRIC =  inWS.data("%s_%d_13TeV_%s_%s"%(proc,options.mass,cat,syst)) #Will exist if the systematic is a symmetric uncertainty not stored as event weights
-  dataDOWN =  inWS.data("%s_%d_13TeV_%s_%sDown01sigma"%(proc,options.mass,cat,syst)) # will exist if teh systematic is an asymetric uncertainty not strore as event weights
-  dataUP =  inWS.data("%s_%d_13TeV_%s_%sUp01sigma"%(proc,options.mass,cat,syst))# will exist if teh systematic is an asymetric uncertainty not strore as event weights
-  dataNOMINAL =  inWS.data("%s_%d_13TeV_%s"%(proc,options.mass,cat)) #Nominal RooDataSet,. May contain required weights if UP/DOWN/SYMMETRIC roodatahists do not exist (ie systematic stored as event weigths)
+  print "SYMMETRIC "
+  datasetname = "%s_%d_13TeV_%s_%s"%(proc.split("_",1)[0],options.mass,proc.split("_",1)[1],cat) if "_" in proc else "%s_%d_13TeV_%s"%(proc,options.mass,cat)
+  print "%s_%s"%(datasetname,syst)
+#  dataSYMMETRIC =  inWS.data("%s_%d_13TeV_%s_%s_%s"%(proc.split("_",1)[0],options.mass,proc.split("_",1)[1],cat,syst)) #Will exist if the systematic is a symmetric uncertainty not stored as event weights
+  dataSYMMETRIC =  inWS.data("%s_%s"%(datasetname,syst)) #Will exist if the systematic is a symmetric uncertainty not stored as event weights
+  print "DOWN"
+  print "%s_%sDown01sigma"%(datasetname,syst)
+#  dataDOWN =  inWS.data("%s_%d_13TeV_%s_%s_%sDown01sigma"%(proc.split("_",1)[0],options.mass,proc.split("_",1)[1],cat,syst)) # will exist if teh systematic is an asymetric uncertainty not strore as event weights
+  dataDOWN =  inWS.data("%s_%sDown01sigma"%(datasetname,syst)) # will exist if teh systematic is an asymetric uncertainty not strore as event weights
+  print "UP"
+  print "%s_%sUp01sigma"%(datasetname,syst)
+#  dataUP =  inWS.data("%s_%d_13TeV_%s_%s_%sUp01sigma"%(proc.split("_",1)[0],options.mass,proc.split("_",1)[1],cat,syst))# will exist if teh systematic is an asymetric uncertainty not strore as event weights
+  dataUP =  inWS.data("%s_%sUp01sigma"%(datasetname,syst))# will exist if teh systematic is an asymetric uncertainty not strore as event weights
+  print "NOMINAL"
+  print datasetname
+#  dataNOMINAL =  inWS.data("%s_%d_13TeV_%s_%s"%(proc.split("_",1)[0],options.mass,proc.split("_",1)[1],cat)) #Nominal RooDataSet,. May contain required weights if UP/DOWN/SYMMETRIC roodatahists do not exist (ie systematic stored as event weigths)
+  dataNOMINAL =  inWS.data(datasetname) #Nominal RooDataSet,. May contain required weights if UP/DOWN/SYMMETRIC roodatahists do not exist (ie systematic stored as event weigths)
 
   dataNOMINAL.Print()
   if (dataSYMMETRIC==None):
@@ -1326,7 +1339,7 @@ if ((options.justThisSyst== "batch_split") or options.justThisSyst==""):
   printObsProcBinLines()
   #nuisance param systematics
   printMultiPdf()
-  printBRSyst()
+#  printBRSyst()
   printLumiSyst()
   #printTrigSyst() # now a weight in the main roodataset!
   if not options.statonly:
