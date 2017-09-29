@@ -5,6 +5,7 @@
 # Standard python import
 from optparse import OptionParser, make_option
 import fnmatch, glob, os, sys, json, itertools, array
+import re
 #sys.argv.append( '-b' )
 
 ## ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -21,6 +22,8 @@ from ROOT import *
 gSystem.AddIncludePath("$CMSSW_BASE/src/flashggFinalFit/Signal/interface/")
 
 gSystem.Load("/mnt/t3nfs01/data01/shome/vtavolar/FinalFits_74_wip/CMSSW_7_4_7/src/flashggFinalFit/Signal/src/DataSetFiller_vec_cc.so")
+gSystem.Load("/mnt/t3nfs01/data01/shome/vtavolar/FinalFits_74_wip/CMSSW_7_4_7/src/flashggFinalFit/Signal/Phi12_C.so")
+gSystem.Load("/mnt/t3nfs01/data01/shome/vtavolar/FinalFits_74_wip/CMSSW_7_4_7/src/flashggFinalFit/Signal/DeltaPhi_C.so")
 #gROOT.ProcessLine('#include "flashgg/Systematics/macros/DataSetFiller.h"')
 
 
@@ -128,6 +131,48 @@ def reduceTrees(label, proc, cat, infile, variable, ralist_nominal, ralist_syst)
             print "trying to read the following tree"
             print "tagsDumper/trees/"+str(proc)+"_"+str(cat)
         tree = infile.Get( "tagsDumper/trees/"+str(proc)+"_"+str(cat) )
+        tree.SetAlias("myGenNjets2p5", "(genJet2p5Numberofdaughters0 > 5) + (genJet2p5Numberofdaughters1 > 5) + (genJet2p5Numberofdaughters2 > 5) + (genJet2p5Numberofdaughters3 > 5) + (genJet2p5Numberofdaughters4 > 5) + (genJet2p5Numberofdaughters5 > 5)")
+        tree.SetAlias("recoMjjEta2p5", "(recoJet2p5Energy0!=-999 && recoJet2p5Energy1!=-999)*(sqrt((recoJet2p5Energy0 + recoJet2p5Energy1)**2 - (recoJet2p5Px0 + recoJet2p5Px1)**2 - (recoJet2p5Py0 + recoJet2p5Py1)**2 - (recoJet2p5Pz0 + recoJet2p5Pz1)**2)) + (recoJet2p5Energy0==-999 || recoJet2p5Energy1==-999)*(-999)")
+        tree.SetAlias("genMjjEta2p5", "(genJet2p5Energy0!=-999 && genJet2p5Energy1!=-999)*(sqrt((genJet2p5Energy0 + genJet2p5Energy1)**2 - (genJet2p5Px0 + genJet2p5Px1)**2 - (genJet2p5Py0 + genJet2p5Py1)**2 - (genJet2p5Pz0 + genJet2p5Pz1)**2)) + (genJet2p5Energy0==-999 || genJet2p5Energy1==-999)*(-999)")
+        tree.SetAlias("recoMjjEta4p7", "(recoJet4p7Energy0!=-999 && recoJet4p7Energy1!=-999)*(sqrt((recoJet4p7Energy0 + recoJet4p7Energy1)**2 - (recoJet4p7Px0 + recoJet4p7Px1)**2 - (recoJet4p7Py0 + recoJet4p7Py1)**2 - (recoJet4p7Pz0 + recoJet4p7Pz1)**2)) + (recoJet4p7Energy0==-999 || recoJet4p7Energy1==-999)*(-999)")
+        tree.SetAlias("genMjjEta4p7", "(genJet4p7Energy0!=-999 && genJet4p7Energy1!=-999)*(sqrt((genJet4p7Energy0 + genJet4p7Energy1)**2 - (genJet4p7Px0 + genJet4p7Px1)**2 - (genJet4p7Py0 + genJet4p7Py1)**2 - (genJet4p7Pz0 + genJet4p7Pz1)**2)) + (genJet4p7Energy0==-999 || genJet4p7Energy1==-999)*(-999)")
+        tree.SetAlias("recoAbsRapidity", "(recoRapidity>=0)*(recoRapidity) +  (recoRapidity<0)*(-recoRapidity)")
+        tree.SetAlias("genAbsRapidity", "(genRapidity>=0)*(genRapidity) +  (genRapidity<0)*(-genRapidity)")
+        tree.SetAlias("recoAbsDeltaRapidityGgJet0Eta2p5","(recoJet2p5Rapidity0 != -999)*(abs(recoRapidity - recoJet2p5Rapidity0)) + (recoJet2p5Rapidity0==-999)*(-999)")
+        tree.SetAlias("genAbsDeltaRapidityGgJet0Eta2p5","(genJet2p5Rapidity0 != -999)*(abs(genRapidity - genJet2p5Rapidity0)) + (genJet2p5Rapidity0==-999)*(-999)")
+        tree.SetAlias("recoAbsDeltaEtaJJEta2p5","(recoJet2p5Energy0!=-999 && recoJet2p5Energy1!=-999)*(abs(recoJet2p5Eta0 - recoJet2p5Eta1)) + (recoJet2p5Energy0==-999 || recoJet2p5Energy1==-999)*(-999)")
+        tree.SetAlias("genAbsDeltaEtaJJEta2p5","(genJet2p5Energy0!=-999 && genJet2p5Energy1!=-999)*(abs(genJet2p5Eta0 - genJet2p5Eta1)) + (genJet2p5Energy0==-999 || genJet2p5Energy1==-999)*(-999)")
+        tree.SetAlias("recoAbsDeltaEtaJJEta4p7","(recoJet4p7Energy0!=-999 && recoJet4p7Energy1!=-999)*(abs(recoJet4p7Eta0 - recoJet4p7Eta1)) + (recoJet4p7Energy0==-999 || recoJet4p7Energy1==-999)*(-999)")
+        tree.SetAlias("genAbsDeltaEtaJJEta4p7","(genJet4p7Energy0!=-999 && genJet4p7Energy1!=-999)*(abs(genJet4p7Eta0 - genJet4p7Eta1)) + (genJet4p7Energy0==-999 || genJet4p7Energy1==-999)*(-999)")
+        tree.SetAlias("recoAbsDeltaPhiGgJet0Eta2p5","(recoJet2p5Phi0 != -999)*(abs(DeltaPhi(recoPhi , recoJet2p5Phi0))) + (recoJet2p5Phi0==-999)*(-999)")
+        tree.SetAlias("genAbsDeltaPhiGgJet0Eta2p5","(genJet2p5Phi0 != -999)*(abs(DeltaPhi(genPhi , genJet2p5Phi0))) + (genJet2p5Phi0==-999)*(-999)")
+        tree.SetAlias("recoZeppenfeldEta4p7", "(recoJet4p7Energy0!=-999 && recoJet4p7Energy1!=-999)*(abs(recoEta - 0.5*(recoJet4p7Eta0+recoJet4p7Eta1))) + (recoJet4p7Energy0==-999 || recoJet4p7Energy1==-999)*(-999)")
+        tree.SetAlias("genZeppenfeldEta4p7", "(genJet4p7Energy0!=-999 && genJet4p7Energy1!=-999)*(abs(genEta - 0.5*(genJet4p7Eta0+genJet4p7Eta1))) + (genJet4p7Energy0==-999 || genJet4p7Energy1==-999)*(-999)")
+        tree.SetAlias("recoCosThetaStar", "abs( ( (recoLeadEnergy + recoLeadPz)*(recoSubleadEnergy - recoSubleadPz) - (recoLeadEnergy - recoLeadPz)*(recoSubleadEnergy + recoSubleadPz) )/( recoMass*sqrt(recoMass*recoMass + recoPt*recoPt) ) )")
+        tree.SetAlias("genCosThetaStar", "abs( ( (genLeadEnergy + genLeadPz)*(genSubleadEnergy - genSubleadPz) - (genLeadEnergy - genLeadPz)*(genSubleadEnergy + genSubleadPz) )/( genMass*sqrt(genMass*genMass + genPt*genPt) ) )")
+
+        tree.SetAlias("recoAbsDeltaPhiGgJjEta4p7","(recoJet4p7Energy0!=-999 && recoJet4p7Energy1!=-999)*abs( DeltaPhi( recoPhi, Phi12(recoJet4p7Px0,recoJet4p7Py0, recoJet4p7Px1,recoJet4p7Py1) ) )   + (recoJet4p7Energy0==-999 || recoJet4p7Energy1==-999)*(-999)")
+        tree.SetAlias("genAbsDeltaPhiGgJjEta4p7","(genJet4p7Energy0!=-999 && genJet4p7Energy1!=-999)*abs( DeltaPhi( genPhi, Phi12(genJet4p7Px0,genJet4p7Py0, genJet4p7Px1,genJet4p7Py1) ) )   + (genJet4p7Energy0==-999 || genJet4p7Energy1==-999)*(-999)")
+        tree.SetAlias("recoAbsDeltaPhiJjEta4p7","(recoJet4p7Energy0!=-999 && recoJet4p7Energy1!=-999)*abs( DeltaPhi( recoJet4p7Phi0, recoJet4p7Phi1 ) )   + (recoJet4p7Energy0==-999 || recoJet4p7Energy1==-999)*(-999)")
+        tree.SetAlias("genAbsDeltaPhiJjEta4p7","(genJet4p7Energy0!=-999 && genJet4p7Energy1!=-999)*abs( DeltaPhi( genJet4p7Phi0, genJet4p7Phi1 ) )   + (genJet4p7Energy0==-999 || genJet4p7Energy1==-999)*(-999)")
+        tree.SetAlias("recoJet2p5AbsRapidity0", "(recoJet2p5Rapidity0!=-999)*abs(recoJet2p5Rapidity0) + (recoJet2p5Rapidity0==-999)*(-999)")
+        tree.SetAlias("genJet2p5AbsRapidity0", "(genJet2p5Rapidity0!=-999)*abs(genJet2p5Rapidity0) + (genJet2p5Rapidity0==-999)*(-999)")
+
+        tree.SetAlias("recoJet4p7AbsRapidity1", "(recoJet4p7Rapidity1!=-999)*abs(recoJet4p7Rapidity1) + (recoJet4p7Rapidity1==-999)*(-999)")
+        tree.SetAlias("genJet4p7AbsRapidity1", "(genJet4p7Rapidity1!=-999)*abs(genJet4p7Rapidity1) + (genJet4p7Rapidity1==-999)*(-999)")
+        
+        tree.SetAlias("recoPtNjets2p5","13000*min(2,recoNjets2p5) + recoPt")
+        tree.SetAlias("genPtNjets2p5","13000*min(2,genNjets2p5) + genPt")
+
+        tree.SetAlias("recoAbsDeltaPhiJjEta4p7VBFlike","(recoJet4p7Energy0!=-999 && recoJet4p7Energy1!=-999 && recoAbsDeltaEtaJJEta4p7 >=3.5 && recoMjjEta4p7>=200)*abs( DeltaPhi( recoJet4p7Phi0, recoJet4p7Phi1 ) )   + (recoJet4p7Energy0==-999 || recoJet4p7Energy1==-999 || recoAbsDeltaEtaJJEta4p7 <3.5 || recoMjjEta4p7<200)*(-999)")
+        tree.SetAlias("genAbsDeltaPhiJjEta4p7VBFlike","(genJet4p7Energy0!=-999 && genJet4p7Energy1!=-999 && genAbsDeltaEtaJJEta4p7 >=3.5 && genMjjEta4p7>=200)*abs( DeltaPhi( genJet4p7Phi0, genJet4p7Phi1 ) )   + (genJet4p7Energy0==-999 || genJet4p7Energy1==-999 || genAbsDeltaEtaJJEta4p7 <3.5 || genMjjEta4p7<200)*(-999)")
+
+        tree.SetAlias("recoAbsDeltaPhiGgJjEta4p7VBFlike","(recoJet4p7Energy0!=-999 && recoJet4p7Energy1!=-999 && recoAbsDeltaEtaJJEta4p7 >=3.5 && recoMjjEta4p7>=200)*abs( DeltaPhi( recoPhi, Phi12(recoJet4p7Px0,recoJet4p7Py0, recoJet4p7Px1,recoJet4p7Py1) ) )   + (recoJet4p7Energy0==-999 || recoJet4p7Energy1==-999 || recoAbsDeltaEtaJJEta4p7 <3.5 || recoMjjEta4p7<200)*(-999)")
+        tree.SetAlias("genAbsDeltaPhiGgJjEta4p7VBFlike","(genJet4p7Energy0!=-999 && genJet4p7Energy1!=-999 && genAbsDeltaEtaJJEta4p7 >=3.5 && genMjjEta4p7>=200)*abs( DeltaPhi( genPhi, Phi12(genJet4p7Px0,genJet4p7Py0, genJet4p7Px1,genJet4p7Py1) ) )   + (genJet4p7Energy0==-999 || genJet4p7Energy1==-999 || genAbsDeltaEtaJJEta4p7 <3.5 || genMjjEta4p7<200)*(-999)")
+
+        tree.SetAlias("recoJet4p7Pt1VBFlike", "(recoJet4p7Pt1!=-999 && recoAbsDeltaEtaJJEta4p7 >=3.5 && recoMjjEta4p7>=200)*recoJet4p7Pt1 + (recoJet4p7Pt1==-999 || recoAbsDeltaEtaJJEta4p7 <3.5 || recoMjjEta4p7<200)*(-999)")
+        tree.SetAlias("genJet4p7Pt1VBFlike", "(genJet4p7Pt1!=-999 && genAbsDeltaEtaJJEta4p7 >=3.5 && genMjjEta4p7>=200)*genJet4p7Pt1 + (genJet4p7Pt1==-999 || genAbsDeltaEtaJJEta4p7 <3.5 || genMjjEta4p7<200)*(-999)")
+
         tree.Print()
     else:
         if options.verbose:
@@ -135,7 +180,51 @@ def reduceTrees(label, proc, cat, infile, variable, ralist_nominal, ralist_syst)
             print "tagsDumper/trees/"+str(proc)+"_"+str(cat)+"_"+str(label)
         tree = infile.Get( "tagsDumper/trees/"+str(proc)+"_"+str(cat)+"_"+str(label) )
         tree.Print()
-    tree.SetAlias("myGenNjets2p5", "(genJet2p5Numberofdaughters0 > 5) + (genJet2p5Numberofdaughters1 > 5) + (genJet2p5Numberofdaughters2 > 5) + (genJet2p5Numberofdaughters3 > 5) + (genJet2p5Numberofdaughters4 > 5) + (genJet2p5Numberofdaughters5 > 5)")
+        tree.SetAlias("myGenNjets2p5", "(genJet2p5Numberofdaughters0 > 5) + (genJet2p5Numberofdaughters1 > 5) + (genJet2p5Numberofdaughters2 > 5) + (genJet2p5Numberofdaughters3 > 5) + (genJet2p5Numberofdaughters4 > 5) + (genJet2p5Numberofdaughters5 > 5)")
+        tree.SetAlias("recoMjjEta2p5", "(recoJet2p5Energy0!=-999 && recoJet2p5Energy1!=-999)*(sqrt((recoJet2p5Energy0 + recoJet2p5Energy1)**2 - (recoJet2p5Px0 + recoJet2p5Px1)**2 - (recoJet2p5Py0 + recoJet2p5Py1)**2 - (recoJet2p5Pz0 + recoJet2p5Pz1)**2)) + (recoJet2p5Energy0==-999 || recoJet2p5Energy1==-999)*(-999)")
+        tree.SetAlias("genMjjEta2p5", "(genJet2p5Energy0!=-999 && genJet2p5Energy1!=-999)*(sqrt((genJet2p5Energy0 + genJet2p5Energy1)**2 - (genJet2p5Px0 + genJet2p5Px1)**2 - (genJet2p5Py0 + genJet2p5Py1)**2 - (genJet2p5Pz0 + genJet2p5Pz1)**2)) + (genJet2p5Energy0==-999 || genJet2p5Energy1==-999)*(-999)")
+        tree.SetAlias("recoMjjEta4p7", "(recoJet4p7Energy0!=-999 && recoJet4p7Energy1!=-999)*(sqrt((recoJet4p7Energy0 + recoJet4p7Energy1)**2 - (recoJet4p7Px0 + recoJet4p7Px1)**2 - (recoJet4p7Py0 + recoJet4p7Py1)**2 - (recoJet4p7Pz0 + recoJet4p7Pz1)**2)) + (recoJet4p7Energy0==-999 || recoJet4p7Energy1==-999)*(-999)")
+        tree.SetAlias("genMjjEta4p7", "(genJet4p7Energy0!=-999 && genJet4p7Energy1!=-999)*(sqrt((genJet4p7Energy0 + genJet4p7Energy1)**2 - (genJet4p7Px0 + genJet4p7Px1)**2 - (genJet4p7Py0 + genJet4p7Py1)**2 - (genJet4p7Pz0 + genJet4p7Pz1)**2)) + (genJet4p7Energy0==-999 || genJet4p7Energy1==-999)*(-999)")
+        tree.SetAlias("recoAbsRapidity", "(recoRapidity>=0)*(recoRapidity) +  (recoRapidity<0)*(-recoRapidity)")
+        tree.SetAlias("genAbsRapidity", "(genRapidity>=0)*(genRapidity) +  (genRapidity<0)*(-genRapidity)")
+        tree.SetAlias("recoAbsDeltaRapidityGgJet0Eta2p5","(recoJet2p5Rapidity0 != -999)*(abs(recoRapidity - recoJet2p5Rapidity0)) + (recoJet2p5Rapidity0==-999)*(-999)")
+        tree.SetAlias("genAbsDeltaRapidityGgJet0Eta2p5","(genJet2p5Rapidity0 != -999)*(abs(genRapidity - genJet2p5Rapidity0)) + (genJet2p5Rapidity0==-999)*(-999)")
+        tree.SetAlias("recoAbsDeltaEtaJJEta2p5","(recoJet2p5Energy0!=-999 && recoJet2p5Energy1!=-999)*(abs(recoJet2p5Eta0 - recoJet2p5Eta1)) + (recoJet2p5Energy0==-999 || recoJet2p5Energy1==-999)*(-999)")
+        tree.SetAlias("genAbsDeltaEtaJJEta2p5","(genJet2p5Energy0!=-999 && genJet2p5Energy1!=-999)*(abs(genJet2p5Eta0 - genJet2p5Eta01) + (genJet2p5Energy0==-999 || genJet2p5Energy1==-999)*(-999)")
+        tree.SetAlias("recoAbsDeltaEtaJJEta4p7","(recoJet4p7Energy0!=-999 && recoJet4p7Energy1!=-999)*(abs(recoJet4p7Eta0 - recoJet4p7Eta1)) + (recoJet4p7Energy0==-999 || recoJet4p7Energy1==-999)*(-999)")
+        tree.SetAlias("genAbsDeltaEtaJJEta4p7","(genJet4p7Energy0!=-999 && genJet4p7Energy1!=-999)*(abs(genJet4p7Eta0 - genJet4p7Eta1)) + (genJet4p7Energy0==-999 || genJet4p7Energy1==-999)*(-999)")
+
+        tree.SetAlias("recoAbsDeltaPhiGgJet0Eta2p5","(recoJet2p5Phi0 != -999)*(abs(DeltaPhi(recoPhi , recoJet2p5Phi0))) + (recoJet2p5Phi0==-999)*(-999)")
+        tree.SetAlias("genAbsDeltaPhiGgJet0Eta2p5","(genJet2p5Phi0 != -999)*(abs(DeltaPhi(genPhi , genJet2p5Phi0))) + (genJet2p5Phi0==-999)*(-999)")
+
+        tree.SetAlias("recoZeppenfeldEta4p7", "(recoJet4p7Energy0!=-999 && recoJet4p7Energy1!=-999)*(abs(recoEta - 0.5*(recoJet4p7Eta0+recoJet4p7Eta1))) + (recoJet4p7Energy0==-999 || recoJet4p7Energy1==-999)*(-999)")
+        tree.SetAlias("genZeppenfeldEta4p7", "(genJet4p7Energy0!=-999 && genJet4p7Energy1!=-999)*(abs(genEta - 0.5*(genJet4p7Eta0+genJet4p7Eta1))) + (genJet4p7Energy0==-999 || genJet4p7Energy1==-999)*(-999)")
+        tree.SetAlias("recoCosThetaStar", "abs( ( (recoLeadEnergy + recoLeadPz)*(recoSubleadEnergy - recoSubleadPz) - (recoLeadEnergy - recoLeadPz)*(recoSubleadEnergy + recoSubleadPz) )/( recoMass*sqrt(recoMass*recoMass + recoPt*recoPt) ) )")
+        tree.SetAlias("genCosThetaStar", "abs( ( (genLeadEnergy + genLeadPz)*(genSubleadEnergy - genSubleadPz) - (genLeadEnergy - genLeadPz)*(genSubleadEnergy + genSubleadPz) )/( genMass*sqrt(genMass*genMass + genPt*genPt) ) )")
+
+        tree.SetAlias("recoAbsDeltaPhiGgJjEta4p7","(recoJet4p7Energy0!=-999 && recoJet4p7Energy1!=-999)*abs( DeltaPhi( recoPhi, Phi12(recoJet4p7Px0,recoJet4p7Py0, recoJet4p7Px1,recoJet4p7Py1) ) )   + (recoJet4p7Energy0==-999 || recoJet4p7Energy1==-999)*(-999)")
+        tree.SetAlias("genAbsDeltaPhiGgJjEta4p7","(genJet4p7Energy0!=-999 && genJet4p7Energy1!=-999)*abs( DeltaPhi( genPhi, Phi12(genJet4p7Px0,genJet4p7Py0, genJet4p7Px1,genJet4p7Py1) ) )   + (genJet4p7Energy0==-999 || genJet4p7Energy1==-999)*(-999)")
+
+        tree.SetAlias("recoAbsDeltaPhiJjEta4p7","(recoJet4p7Energy0!=-999 && recoJet4p7Energy1!=-999)*abs( DeltaPhi( recoJet4p7Phi0, recoJet4p7Phi1 ) )   + (recoJet4p7Energy0==-999 || recoJet4p7Energy1==-999)*(-999)")
+        tree.SetAlias("genAbsDeltaPhiJjEta4p7","(genJet4p7Energy0!=-999 && genJet4p7Energy1!=-999)*abs( DeltaPhi( genJet4p7Phi0, genJet4p7Phi1 ) )   + (genJet4p7Energy0==-999 || genJet4p7Energy1==-999)*(-999)")
+        tree.SetAlias("recoJet2p5AbsRapidity0", "(recoJet2p5Rapidity0!=-999)*abs(recoJet2p5Rapidity0) + (recoJet2p5Rapidity0==-999)*(-999)")
+        tree.SetAlias("genJet2p5AbsRapidity0", "(genJet2p5Rapidity0!=-999)*abs(genJet2p5Rapidity0) + (genJet2p5Rapidity0==-999)*(-999)")
+
+        tree.SetAlias("recoJet4p7AbsRapidity1", "(recoJet4p7Rapidity1!=-999)*abs(recoJet4p7Rapidity1) + (recoJet4p7Rapidity1==-999)*(-999)")
+        tree.SetAlias("genJet4p7AbsRapidity1", "(genJet4p7Rapidity1!=-999)*abs(genJet4p7Rapidity1) + (genJet4p7Rapidity1==-999)*(-999)")
+
+        tree.SetAlias("recoPtNjets2p5","13000*min(2,recoNjets2p5) + recoPt")
+        tree.SetAlias("genPtNjets2p5","13000*min(2,genNjets2p5) + genPt")
+
+        tree.SetAlias("recoAbsDeltaPhiJjEta4p7VBFlike","(recoJet4p7Energy0!=-999 && recoJet4p7Energy1!=-999 && recoAbsDeltaEtaJJEta4p7 >=3.5 && recoMjjEta4p7>=200)*abs( DeltaPhi( recoJet4p7Phi0, recoJet4p7Phi1 ) )   + (recoJet4p7Energy0==-999 || recoJet4p7Energy1==-999 || recoAbsDeltaEtaJJEta4p7 <3.5 || recoMjjEta4p7<200)*(-999)")
+        tree.SetAlias("genAbsDeltaPhiJjEta4p7VBFlike","(genJet4p7Energy0!=-999 && genJet4p7Energy1!=-999 && genAbsDeltaEtaJJEta4p7 >=3.5 && genMjjEta4p7>=200)*abs( DeltaPhi( genJet4p7Phi0, genJet4p7Phi1 ) )   + (genJet4p7Energy0==-999 || genJet4p7Energy1==-999 || genAbsDeltaEtaJJEta4p7 <3.5 || genMjjEta4p7<200)*(-999)")
+
+        tree.SetAlias("recoAbsDeltaPhiGgJjEta4p7VBFlike","(recoJet4p7Energy0!=-999 && recoJet4p7Energy1!=-999 && recoAbsDeltaEtaJJEta4p7 >=3.5 && recoMjjEta4p7>=200)*abs( DeltaPhi( recoPhi, Phi12(recoJet4p7Px0,recoJet4p7Py0, recoJet4p7Px1,recoJet4p7Py1) ) )   + (recoJet4p7Energy0==-999 || recoJet4p7Energy1==-999 || recoAbsDeltaEtaJJEta4p7 <3.5 || recoMjjEta4p7<200)*(-999)")
+        tree.SetAlias("genAbsDeltaPhiGgJjEta4p7VBFlike","(genJet4p7Energy0!=-999 && genJet4p7Energy1!=-999 && genAbsDeltaEtaJJEta4p7 >=3.5 && genMjjEta4p7>=200)*abs( DeltaPhi( genPhi, Phi12(genJet4p7Px0,genJet4p7Py0, genJet4p7Px1,genJet4p7Py1) ) )   + (genJet4p7Energy0==-999 || genJet4p7Energy1==-999 || genAbsDeltaEtaJJEta4p7 <3.5 || genMjjEta4p7<200)*(-999)")
+
+        tree.SetAlias("recoJet4p7Pt1VBFlike", "(recoJet4p7Pt1!=-999 && recoAbsDeltaEtaJJEta4p7 >=3.5 && recoMjjEta4p7>=200)*recoJet4p7Pt1 + (recoJet4p7Pt1==-999 || recoAbsDeltaEtaJJEta4p7 <3.5 || recoMjjEta4p7<200)*(-999)")
+        tree.SetAlias("genJet4p7Pt1VBFlike", "(genJet4p7Pt1!=-999 && genAbsDeltaEtaJJEta4p7 >=3.5 && genMjjEta4p7>=200)*genJet4p7Pt1 + (genJet4p7Pt1==-999 || genAbsDeltaEtaJJEta4p7 <3.5 || genMjjEta4p7<200)*(-999)")
+
     boundaries = []
     boundaries.append( variable[-2] )
     boundaries.append( variable[-1] )
@@ -216,14 +305,14 @@ def reduceTrees(label, proc, cat, infile, variable, ralist_nominal, ralist_syst)
         boundaries.append( variable[-2] )
         boundaries.append( variable[-1] )
         if options.verbose:
-            print "root hasattr before"
+            print "pdfweights root hasattr before"
             print hasattr(ROOT, "vecBoundaries")
         if not hasattr(ROOT, "vecBoundaries"):
             gROOT.ProcessLine(" std::vector<std::vector<double > >* vecBoundaries = new std::vector<std::vector<double > >() ;")
         else:
             ROOT.vecBoundaries.clear()
         if options.verbose:
-            print "root hasattr after"
+            print "pdfweights root hasattr after"
             print hasattr(ROOT, "vecBoundaries")
         if not hasattr(ROOT, "tempvec"):
             gROOT.ProcessLine("std::vector<double >* tempvec = new std::vector<double >() ;")
@@ -334,8 +423,9 @@ def main(o,args):
 
     variables_0=[]    
     variables_1=[]    
+    isData=False
     for ivarset in range(len(variables)):
-        isData=False
+        isData = any("data" in bla.lower() for bla in procs)
         varset = variables[ivarset]
         print 'we look at the variable ...'
         print variables[ivarset]
@@ -349,16 +439,61 @@ def main(o,args):
 
         proc = procs[0]
         cat = cats[0]
+        print "trying to read.."
+        print "tagsDumper/trees/"+str(proc)+"_"+str(cat)
         tree = infile.Get( "tagsDumper/trees/"+str(proc)+"_"+str(cat) )
         tree.SetAlias("myGenNjets2p5", "(genJet2p5Numberofdaughters0 > 5) + (genJet2p5Numberofdaughters1 > 5) + (genJet2p5Numberofdaughters2 > 5) + (genJet2p5Numberofdaughters3 > 5) + (genJet2p5Numberofdaughters4 > 5) + (genJet2p5Numberofdaughters5 > 5)")
+        tree.SetAlias("recoMjjEta2p5", "(recoJet2p5Energy0!=-999 && recoJet2p5Energy1!=-999)*(sqrt((recoJet2p5Energy0 + recoJet2p5Energy1)**2 - (recoJet2p5Px0 + recoJet2p5Px1)**2 - (recoJet2p5Py0 + recoJet2p5Py1)**2 - (recoJet2p5Pz0 + recoJet2p5Pz1)**2)) + (recoJet2p5Energy0==-999 || recoJet2p5Energy1==-999)*(-999)")
+        tree.SetAlias("genMjjEta2p5", "(genJet2p5Energy0!=-999 && genJet2p5Energy1!=-999)*(sqrt((genJet2p5Energy0 + genJet2p5Energy1)**2 - (genJet2p5Px0 + genJet2p5Px1)**2 - (genJet2p5Py0 + genJet2p5Py1)**2 - (genJet2p5Pz0 + genJet2p5Pz1)**2)) + (genJet2p5Energy0==-999 || genJet2p5Energy1==-999)*(-999)")
+        tree.SetAlias("recoMjjEta4p7", "(recoJet4p7Energy0!=-999 && recoJet4p7Energy1!=-999)*(sqrt((recoJet4p7Energy0 + recoJet4p7Energy1)**2 - (recoJet4p7Px0 + recoJet4p7Px1)**2 - (recoJet4p7Py0 + recoJet4p7Py1)**2 - (recoJet4p7Pz0 + recoJet4p7Pz1)**2)) + (recoJet4p7Energy0==-999 || recoJet4p7Energy1==-999)*(-999)")
+        tree.SetAlias("genMjjEta4p7", "(genJet4p7Energy0!=-999 && genJet4p7Energy1!=-999)*(sqrt((genJet4p7Energy0 + genJet4p7Energy1)**2 - (genJet4p7Px0 + genJet4p7Px1)**2 - (genJet4p7Py0 + genJet4p7Py1)**2 - (genJet4p7Pz0 + genJet4p7Pz1)**2)) + (genJet4p7Energy0==-999 || genJet4p7Energy1==-999)*(-999)")
+        tree.SetAlias("recoAbsRapidity", "(recoRapidity>=0)*(recoRapidity) +  (recoRapidity<0)*(-recoRapidity)")
+        tree.SetAlias("genAbsRapidity", "(genRapidity>=0)*(genRapidity) +  (genRapidity<0)*(-genRapidity)")
+        tree.SetAlias("recoAbsDeltaRapidityGgJet0Eta2p5","(recoJet2p5Rapidity0 != -999)*(abs(recoRapidity - recoJet2p5Rapidity0)) + (recoJet2p5Rapidity0==-999)*(-999)")
+        tree.SetAlias("genAbsDeltaRapidityGgJet0Eta2p5","(genJet2p5Rapidity0 != -999)*(abs(genRapidity - genJet2p5Rapidity0)) + (genJet2p5Rapidity0==-999)*(-999)")
+        tree.SetAlias("recoAbsDeltaEtaJJEta2p5","(recoJet2p5Energy0!=-999 && recoJet2p5Energy1!=-999)*(abs(recoJet2p5Eta0 - recoJet2p5Eta1)) + (recoJet2p5Energy0==-999 || recoJet2p5Energy1==-999)*(-999)")
+        tree.SetAlias("genAbsDeltaEtaJJEta2p5","(genJet2p5Energy0!=-999 && genJet2p5Energy1!=-999)*(abs(genJet2p5Eta0 - genJet2p5Eta1)) + (genJet2p5Energy0==-999 || genJet2p5Energy1==-999)*(-999)")
+        tree.SetAlias("recoAbsDeltaEtaJJEta4p7","(recoJet4p7Energy0!=-999 && recoJet4p7Energy1!=-999)*(abs(recoJet4p7Eta0 - recoJet4p7Eta1)) + (recoJet4p7Energy0==-999 || recoJet4p7Energy1==-999)*(-999)")
+        tree.SetAlias("genAbsDeltaEtaJJEta4p7","(genJet4p7Energy0!=-999 && genJet4p7Energy1!=-999)*(abs(genJet4p7Eta0 - genJet4p7Eta1)) + (genJet4p7Energy0==-999 || genJet4p7Energy1==-999)*(-999)")
+        tree.SetAlias("recoAbsDeltaPhiGgJet0Eta2p5","(recoJet2p5Phi0 != -999)*(abs(DeltaPhi(recoPhi , recoJet2p5Phi0))) + (recoJet2p5Phi0==-999)*(-999)")
+        tree.SetAlias("genAbsDeltaPhiGgJet0Eta2p5","(genJet2p5Phi0 != -999)*(abs(DeltaPhi(genPhi , genJet2p5Phi0))) + (genJet2p5Phi0==-999)*(-999)")
+        tree.SetAlias("recoZeppenfeldEta4p7", "(recoJet4p7Energy0!=-999 && recoJet4p7Energy1!=-999)*(abs(recoEta - 0.5*(recoJet4p7Eta0+recoJet4p7Eta1))) + (recoJet4p7Energy0==-999 || recoJet4p7Energy1==-999)*(-999)")
+        tree.SetAlias("genZeppenfeldEta4p7", "(genJet4p7Energy0!=-999 && genJet4p7Energy1!=-999)*(abs(genEta - 0.5*(genJet4p7Eta0+genJet4p7Eta1))) + (genJet4p7Energy0==-999 || genJet4p7Energy1==-999)*(-999)")
+        tree.SetAlias("recoCosThetaStar", "abs( ( (recoLeadEnergy + recoLeadPz)*(recoSubleadEnergy - recoSubleadPz) - (recoLeadEnergy - recoLeadPz)*(recoSubleadEnergy + recoSubleadPz) )/( recoMass*sqrt(recoMass*recoMass + recoPt*recoPt) ) )")
+        tree.SetAlias("genCosThetaStar", "abs( ( (genLeadEnergy + genLeadPz)*(genSubleadEnergy - genSubleadPz) - (genLeadEnergy - genLeadPz)*(genSubleadEnergy + genSubleadPz) )/( genMass*sqrt(genMass*genMass + genPt*genPt) ) )")
+
+        tree.SetAlias("recoAbsDeltaPhiGgJjEta4p7","(recoJet4p7Energy0!=-999 && recoJet4p7Energy1!=-999)*abs( DeltaPhi( recoPhi, Phi12(recoJet4p7Px0,recoJet4p7Py0, recoJet4p7Px1,recoJet4p7Py1) ) )   + (recoJet4p7Energy0==-999 || recoJet4p7Energy1==-999)*(-999)")
+        tree.SetAlias("genAbsDeltaPhiGgJjEta4p7","(genJet4p7Energy0!=-999 && genJet4p7Energy1!=-999)*abs( DeltaPhi( genPhi, Phi12(genJet4p7Px0,genJet4p7Py0, genJet4p7Px1,genJet4p7Py1) ) )   + (genJet4p7Energy0==-999 || genJet4p7Energy1==-999)*(-999)")
+
+
+        tree.SetAlias("recoAbsDeltaPhiJjEta4p7","(recoJet4p7Energy0!=-999 && recoJet4p7Energy1!=-999)*abs( DeltaPhi( recoJet4p7Phi0, recoJet4p7Phi1 ) )   + (recoJet4p7Energy0==-999 || recoJet4p7Energy1==-999)*(-999)")
+        tree.SetAlias("genAbsDeltaPhiJjEta4p7","(genJet4p7Energy0!=-999 && genJet4p7Energy1!=-999)*abs( DeltaPhi( genJet4p7Phi0, genJet4p7Phi1 ) )   + (genJet4p7Energy0==-999 || genJet4p7Energy1==-999)*(-999)")
+        tree.SetAlias("recoJet2p5AbsRapidity0", "(recoJet2p5Rapidity0!=-999)*abs(recoJet2p5Rapidity0) + (recoJet2p5Rapidity0==-999)*(-999)")
+        tree.SetAlias("genJet2p5AbsRapidity0", "(genJet2p5Rapidity0!=-999)*abs(genJet2p5Rapidity0) + (genJet2p5Rapidity0==-999)*(-999)")
+
+        tree.SetAlias("recoJet4p7AbsRapidity1", "(recoJet4p7Rapidity1!=-999)*abs(recoJet4p7Rapidity1) + (recoJet4p7Rapidity1==-999)*(-999)")
+        tree.SetAlias("genJet4p7AbsRapidity1", "(genJet4p7Rapidity1!=-999)*abs(genJet4p7Rapidity1) + (genJet4p7Rapidity1==-999)*(-999)")
+
+        tree.SetAlias("recoPtNjets2p5","13000*min(2,recoNjets2p5) + recoPt")
+        tree.SetAlias("genPtNjets2p5","13000*min(2,genNjets2p5) + genPt")
+
+        tree.SetAlias("recoAbsDeltaPhiJjEta4p7VBFlike","(recoJet4p7Energy0!=-999 && recoJet4p7Energy1!=-999 && recoAbsDeltaEtaJJEta4p7 >=3.5 && recoMjjEta4p7>=200)*abs( DeltaPhi( recoJet4p7Phi0, recoJet4p7Phi1 ) )   + (recoJet4p7Energy0==-999 || recoJet4p7Energy1==-999 || recoAbsDeltaEtaJJEta4p7 <3.5 || recoMjjEta4p7<200)*(-999)")
+        tree.SetAlias("genAbsDeltaPhiJjEta4p7VBFlike","(genJet4p7Energy0!=-999 && genJet4p7Energy1!=-999 && genAbsDeltaEtaJJEta4p7 >=3.5 && genMjjEta4p7>=200)*abs( DeltaPhi( genJet4p7Phi0, genJet4p7Phi1 ) )   + (genJet4p7Energy0==-999 || genJet4p7Energy1==-999 || genAbsDeltaEtaJJEta4p7 <3.5 || genMjjEta4p7<200)*(-999)")
+
+        tree.SetAlias("recoAbsDeltaPhiGgJjEta4p7VBFlike","(recoJet4p7Energy0!=-999 && recoJet4p7Energy1!=-999 && recoAbsDeltaEtaJJEta4p7 >=3.5 && recoMjjEta4p7>=200)*abs( DeltaPhi( recoPhi, Phi12(recoJet4p7Px0,recoJet4p7Py0, recoJet4p7Px1,recoJet4p7Py1) ) )   + (recoJet4p7Energy0==-999 || recoJet4p7Energy1==-999 || recoAbsDeltaEtaJJEta4p7 <3.5 || recoMjjEta4p7<200)*(-999)")
+        tree.SetAlias("genAbsDeltaPhiGgJjEta4p7VBFlike","(genJet4p7Energy0!=-999 && genJet4p7Energy1!=-999 && genAbsDeltaEtaJJEta4p7 >=3.5 && genMjjEta4p7>=200)*abs( DeltaPhi( genPhi, Phi12(genJet4p7Px0,genJet4p7Py0, genJet4p7Px1,genJet4p7Py1) ) )   + (genJet4p7Energy0==-999 || genJet4p7Energy1==-999 || genAbsDeltaEtaJJEta4p7 <3.5 || genMjjEta4p7<200)*(-999)")
+
+        tree.SetAlias("recoJet4p7Pt1VBFlike", "(recoJet4p7Pt1!=-999 && recoAbsDeltaEtaJJEta4p7 >=3.5 && recoMjjEta4p7>=200)*recoJet4p7Pt1 + (recoJet4p7Pt1==-999 || recoAbsDeltaEtaJJEta4p7 <3.5 || recoMjjEta4p7<200)*(-999)")
+        tree.SetAlias("genJet4p7Pt1VBFlike", "(genJet4p7Pt1!=-999 && genAbsDeltaEtaJJEta4p7 >=3.5 && genMjjEta4p7>=200)*genJet4p7Pt1 + (genJet4p7Pt1==-999 || genAbsDeltaEtaJJEta4p7 <3.5 || genMjjEta4p7<200)*(-999)")
+
         varsInTree = []
         branchNames = tree.GetListOfBranches().Clone()
         for i in range( branchNames.GetEntries() ):
             varsInTree.append(branchNames.At(i).GetName())
-#        print "varsInTree"
-#        print varsInTree
+        print "varsInTree"
+        print varsInTree
         #do not dump into ws vars if they are needed only for splitting, or if they are "other" vars not used at the moment (not even for splitting)
-        varsToDump = [var for var in varsInTree if (var not in options.othervars and var not in variables_0 and var not in variables_1) ]
+        varsToDump = [var for var in varsInTree if (var not in options.othervars and var not in variables_0 and var not in variables_1 and var != "CMS_hgg_mass") ]
 #        print "varsToDump"
 #        print varsToDump
         #eliminate duplicates from list
@@ -373,8 +508,11 @@ def main(o,args):
 #        print varsToDump[23]
 #        del varsToDump[23]
         
-#        print "varsToDump before for"
-#        print varsToDump
+        print "varsToDump before for"
+        print varsToDump
+##        varsToDump = ["weight","dZ", "lumi", "processIndex"]
+        varsToDump = ["weight", "lumi"]
+        
         for var in varsToDump:
 #            print "print them one by one"
 #            print var
@@ -402,10 +540,39 @@ def main(o,args):
         systlabels = getSystLabels()
         rrv_cms_mass = RooRealVar("CMS_hgg_mass", "CMS_hgg_mass", 100, 180)
         rrv_cms_mass.setBins(160)
+        ###add mass also to the standard set
+        rooarglist.add(rrv_cms_mass, True)
+        
+        if not isData:
+            rrv_dZ = RooRealVar("dZ", "dZ", -25, 27)
+            rrv_dZ.setBins(2)
+            rooarglist.add(rrv_dZ, True)
+
+            rrv_processIndex = RooRealVar("processIndex", "processIndex", 10, 15)
+            rrv_processIndex.setBins(5)
+            rooarglist.add(rrv_processIndex, True)
+
+
+
+##        rrv_cms_mass.setBins(160)
         rrv_weight = RooRealVar("weight", "weight", -float("inf"), float("inf"))
         rooarglist_syst=RooArgList(rrv_cms_mass,rrv_weight)
         systlabels.append("")
 
+        if options.label == "nominal" and "125" in procs[0]:
+            systweights = ["LooseMvaSF", "PreselSF", "ElectronWeight", "electronVetoSF", "MuonWeight", "TriggerWeight"]
+            directions = ["Up01sigma", "Down01sigma"]
+            for syst in systweights:
+                for ddir in directions:
+                    rrv = RooRealVar(str(syst)+str(ddir), str(syst)+str(ddir), -1000, 1000)
+                    rrv.Print()
+                    rooarglist.add(rrv, True)    
+                    roorealvars.append(rrv)
+            rrv = RooRealVar("centralObjectWeight", "centralObjectWeight", -1000, 1000)
+            rooarglist.add(rrv, True)    
+            roorealvars.append(rrv)
+        rooarglist.Print()
+                
         if options.label:
             if options.label == "pdfWeights":
                 systlabels=["pdfWeights"]
@@ -419,9 +586,29 @@ def main(o,args):
                 print "proc ",proc
                 for cat in cats:
                     print "cat ",cat
-		    datasetsReduced = reduceTrees(label, proc, cat, infile, variables[ivarset], rooarglist, rooarglist_syst)
-
-
+		    datasetsReduced.update( reduceTrees(label, proc, cat, infile, variables[ivarset], rooarglist, rooarglist_syst) )
+                    
+        if options.label == "nominal" and "125" in procs[0]:
+            processNames=[]
+            categoryNames=[]
+            dnames = datasetsReduced.keys()
+            for dname in dnames:
+                print dname
+                gr = re.compile('(_m*\d+p\d*_m*\d+p\d*)').split(dname)
+                if len(gr) != 5:
+                    print "ERROR! Could not extract proc, cat names from datasets' list"
+                    break
+                processNames.append( gr[0].replace("125_13TeV_","")+gr[1])
+                print "processNames at this iteration"
+                print processNames[-1]
+                categoryNames.append( gr[2].lstrip("_")+gr[3]+gr[4] )
+                print "categoryNames at this iteration"
+                print categoryNames[-1]
+            procNames_set = set(processNames)    
+            catNames_set = set(categoryNames)
+            fnames = open("proc_cat_names_"+str(variables[ivarset][1])+".txt", "w")
+            fnames.write(",".join(procNames_set)+"\n")
+            fnames.write(",".join(catNames_set)+"\n")
 
         new_wspace = RooWorkspace("cms_hgg_13TeV")
         outfilename = options.outfile.split('.')[0]+'_'+str(variables[ivarset][0])
