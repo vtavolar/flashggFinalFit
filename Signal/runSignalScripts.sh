@@ -22,8 +22,12 @@ REFPROC=""
 REFPROCDIFF=""
 REFTAGDIFF=""
 REFTAGWV=""
+REFPROCWV=""
+NORMCUT=""
 KEEPCURRENTFITS=0
 NOSYSTS=0
+SKIPSECONDARYMODELS=0
+USEFTEST=0
 usage(){
 	echo "The script runs three signal scripts in this order:"
 		echo "signalFTest --> determines number of gaussians to use for fits of each Tag/Process"
@@ -49,6 +53,10 @@ usage(){
 		echo "--refProcDiff)  ref replacement process for differentials)"
 		echo "--refTagDiff)  ref replacement tag for differentials)"  
 		echo "--refTagWV)  ref replacement tag for WV)"      
+		echo "--refProcWV)  ref replacement proc for WV)"      
+		echo "--normalisationCut) cut on datasets for final signal normalisation)"      
+		echo "--skipSecondaryModels) Turn off creation of all additional models) "
+		echo "--useFtest) Use f-test result as it is, without manual tuning) "
 }
 
 
@@ -56,7 +64,7 @@ usage(){
 
 
 # options may be followed by one colon to indicate they have a required argument
-if ! options=$(getopt -u -o hi:p:f: -l help,inputFile:,procs:,bs:,smears:,scales:,scalesCorr:,scalesGlobal:,flashggCats:,ext:,fTestOnly,calcPhoSystOnly,sigFitOnly,sigPlotsOnly,intLumi:,batch:,MHref:,keepCurrentFits,noSysts,shiftOffDiag,refProc:,refProcDiff:,refTagDiff:,refTagWV: -- "$@")
+if ! options=$(getopt -u -o hi:p:f: -l help,inputFile:,procs:,bs:,smears:,scales:,scalesCorr:,scalesGlobal:,flashggCats:,ext:,fTestOnly,calcPhoSystOnly,sigFitOnly,sigPlotsOnly,intLumi:,batch:,MHref:,keepCurrentFits,noSysts,shiftOffDiag,refProc:,refProcDiff:,refTagDiff:,refTagWV:,refProcWV:,normalisationCut:,skipSecondaryModels,useFtest -- "$@")
 then
 # something went wrong, getopt will put out an error message for us
 exit 1
@@ -90,6 +98,10 @@ case $1 in
 --refProcDiff) REFPROCDIFF=$2; shift;;
 --refTagDiff) REFTAGDIFF=$2; shift;;
 --refTagWV) REFTAGWV=$2; shift;;
+--refProcWV) REFPROCWV=$2; shift;;
+--normalisationCut) NORMCUT=$2; shift;;
+--skipSecondaryModels) SKIPSECONDARYMODELS=1;;
+--useFtest) USEFTEST=1;;
 
 (--) shift; break;;
 (-*) usage; echo "$0: error - unrecognized option $1" 1>&2; usage >> /dev/stderr; exit 1;;
@@ -187,15 +199,25 @@ else
     rm -rf $OUTDIR/sigfTest
     mv $OUTDIR/fTest $OUTDIR/sigfTest
   fi
-  echo "[INFO] sigFTest jobs completed, check output and do:"
-  echo "cp $PWD/dat/newConfig_${EXT}_temp.dat $PWD/dat/newConfig_${EXT}.dat"
-  echo "and manually amend chosen number of gaussians using the output pdfs here:"
-	echo "Signal/outdir_${EXT}/sigfTest/"
-  echo "then re-run the same command to continue !"
-  CALCPHOSYSTONLY=0
-  SIGFITONLY=0
-  SIGPLOTSONLY=0
-	exit 1
+  echo "USEFTEST is (sigscript)"
+  echo $USEFTEST
+  if [ $USEFTEST == 1 ];then
+      echo "[INFO] sigFtest completed"
+      echo "[INFO] using the results of the F-test as they are and building the signal model"
+      echo "If you want to amend the number of gaussians, do it in $PWD/dat/newConfig_${EXT}.dat and re-run!"
+      cp dat/newConfig_${EXT}_temp.dat dat/newConfig_${EXT}.dat
+      cp dat/newConfig_${EXT}_temp.dat $OUTDIR/dat/newConfig_${EXT}.dat
+  else
+      echo "[INFO] sigFTest jobs completed, check output and do:"
+      echo "cp $PWD/dat/newConfig_${EXT}_temp.dat $PWD/dat/newConfig_${EXT}.dat"
+      echo "and manually amend chosen number of gaussians using the output pdfs here:"
+      echo "Signal/outdir_${EXT}/sigfTest/"
+      echo "then re-run the same command to continue !"
+      CALCPHOSYSTONLY=0
+      SIGFITONLY=0
+      SIGPLOTSONLY=0
+      exit 1
+  fi
 fi
 ####################################################
 ################## CALCPHOSYSTCONSTS ###################
@@ -252,7 +274,16 @@ if [ $SIGFITONLY == 1 ]; then
     if [[ $REFTAGWV ]]; then
 	SIGFITOPTS="${SIGFITOPTS} --refTagWV $REFTAGWV"
     fi
-    
+    if [[ $REFPROCWV ]]; then
+	SIGFITOPTS="${SIGFITOPTS} --refProcWV $REFPROCWV"
+    fi
+    if [[ $NORMCUT ]]; then
+	SIGFITOPTS="${SIGFITOPTS} --normalisationCut $NORMCUT"
+    fi
+    if [ $SKIPSECONDARYMODELS == 1 ]; then
+	SIGFITOPTS="${SIGFITOPTS} --skipSecondaryModels"
+    fi    
+
     echo "runsigopt is $SIGFITOPTS"
 
 
