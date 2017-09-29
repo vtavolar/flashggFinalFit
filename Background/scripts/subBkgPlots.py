@@ -49,6 +49,7 @@ for cat in range(ncats):
   f = open('%s/sub%d.sh'%(options.outDir,cat),'w')
   f.write('#!/bin/bash\n')
   f.write('cd %s\n'%os.getcwd())
+  f.write('touch %s/%s/sub%d.run \n' %(os.getcwd(),options.outDir,cat) )
 #  if (options.batch == "T3CH"):
   f.write('CMSSW_DIR=%s\n'%(os.environ['CMSSW_BASE']))
   if (options.batch == "T3CH"):
@@ -88,7 +89,12 @@ for cat in range(ncats):
     execLine += ' --makeCrossCheckProfPlots'
   if options.verbose:
     execLine += ' --verbose'
-  f.write('%s\n'%execLine);
+  f.write('if ( %s ); then\n'%execLine);
+  f.write('touch %s/%s/sub%d.done \n' %(os.getcwd(),options.outDir,cat) )
+  f.write('else\n')
+  f.write('touch %s/%s/sub%d.fail \n' %(os.getcwd(),options.outDir,cat) )
+  f.write('fi\n')
+  f.write('rm -f %s/%s/sub%d.run \n' %(os.getcwd(),options.outDir,cat) )
   f.close()
   print execLine
   

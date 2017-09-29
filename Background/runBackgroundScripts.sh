@@ -16,6 +16,8 @@ SEED=0
 INTLUMI=1
 ISDATA=0
 UNBLIND=0
+NOBKGPLOTS=0
+MONITORDATAPLOTS=0
 
 usage(){
 	echo "The script runs background scripts:"
@@ -35,6 +37,8 @@ echo "--seed) for pseudodata random number gen seed (default $SEED)"
 echo "--intLumi) specified in fb^-{1} (default $INTLUMI)) "
 echo "--isData) specified in fb^-{1} (default $DATA)) "
 echo "--unblind) specified in fb^-{1} (default $UNBLIND)) "
+echo "--noBkgPlots) skip backgroud plots jobs) "
+echo "--monitorDataPlots) monitor jobs submitted for data mass plots) "
 		echo "--batch) which batch system to use (None (''),LSF,IC) (default '$BATCH')) "
 }
 
@@ -43,7 +47,7 @@ echo "--unblind) specified in fb^-{1} (default $UNBLIND)) "
 
 
 # options may be followed by one colon to indicate they have a required argument
-if ! options=$(getopt -u -o hi:p:f: -l help,inputFile:,procs:,flashggCats:,ext:,fTestOnly,pseudoDataOnly,bkgPlotsOnly,pseudoDataDat:,sigFile:,seed:,intLumi:,unblind,isData,batch: -- "$@")
+if ! options=$(getopt -u -o hi:p:f: -l help,inputFile:,procs:,flashggCats:,ext:,fTestOnly,pseudoDataOnly,bkgPlotsOnly,pseudoDataDat:,sigFile:,seed:,intLumi:,unblind,isData,batch:,noBkgPlots,monitorDataPlots -- "$@")
 then
 # something went wrong, getopt will put out an error message for us
 exit 1
@@ -68,6 +72,9 @@ case $1 in
 --isData) ISDATA=1;;
 --unblind) UNBLIND=1;;
 --batch) BATCH=$2; shift;;
+--noBkgPlots) NOBKGPLOTS=1;;
+--monitorDataPlots) MONITORDATAPLOTS=1;;
+
 
 (--) shift; break;;
 (-*) usage; echo "$0: error - unrecognized option $1" 1>&2; usage >> /dev/stderr; exit 1;;
@@ -95,9 +102,12 @@ echo "PSEUDODATAONLY = $PSEUDODATAONLY"
 
 if [ $FTESTONLY == 0 -a $PSEUDODATAONLY == 0 -a $BKGPLOTSONLY == 0 ]; then
 #IF not particular script specified, run all!
-FTESTONLY=1
-PSEUDODATAONLY=1
-BKGPLOTSONLY=1
+    FTESTONLY=1
+    PSEUDODATAONLY=1
+    BKGPLOTSONLY=1
+    if [ $NOBKGPLOTS == 1 ]; then
+	BKGPLOTSONLY=0
+    fi
 fi
 
 if [[ $BATCH == "IC" ]]; then
@@ -184,18 +194,29 @@ echo "./scripts/subBkgPlots.py -b CMS-HGG_multipdf_$EXT.root -d $OUTDIR/bkgPlots
 
 #./scripts/subBkgPlots.py -b CMS-HGG_multipdf_$EXT.root -d $OUTDIR/bkgPlots$DATAEXT -S 13 --isMultiPdf --useBinnedData   --massStep 1 $SIG -L 100 -H 180 -f $CATS -l $CATS --intLumi $INTLUMI $OPT --batch $BATCH -q $DEFAULTQUEUE
 
-continueLoop=1
-while (($continueLoop==1))
-do
- sleep 10
- $BATCHQUERY
- $BATCHQUERY >qstat_out.txt
- ((number=`cat qstat_out.txt | wc -l `))
- echo $number
-  if (($number==0)) ; then
-     ((continueLoop=0))
-  fi
-done 
+
+if [ $MONITORDATAPLOTS == 1 ]; then
+    PEND=`ls -l $OUTDIR/bkgPlots-Data/sub*| grep -v "\.run" | grep -v "\.done" | grep -v "\.fail" | grep -v "\.err" |grep -v "\.log"  |wc -l`
+    TOTAL=`ls -l $OUTDIR/bkgPlots-Data/sub*| grep "\.sh"  |wc -l`
+    echo "PEND $PEND"
+    while (( $PEND > 0 )) ; do
+	PEND=`ls -l $OUTDIR/bkgPlots-Data/sub* | grep -v "\.run" | grep -v "\.done" | grep -v "\.fail" | grep -v "\.err" | grep -v "\.log" |wc -l`
+	RUN=`ls -l $OUTDIR/bkgPlots-Data/sub* | grep "\.run" |wc -l`
+	FAIL=`ls -l $OUTDIR/bkgPlots-Data/sub* | grep "\.fail" |wc -l`
+	DONE=`ls -l $OUTDIR/bkgPlots-Data/sub* | grep "\.done" |wc -l`
+	(( PEND=$PEND-$RUN-$FAIL-$DONE ))
+	echo " PEND $PEND - RUN $RUN - DONE $DONE - FAIL $FAIL"
+	if (( $RUN > 0 )) ; then PEND=1 ; fi
+	if (( $DONE == $TOTAL )) ; then PEND=0; fi
+	if (( $FAIL > 0 )) ; then 
+            echo "ERROR at least one job failed :"
+            ls -l $OUTDIR/bkgPlots-Data/sub* | grep "\.fail"
+            exit 1
+	fi
+	sleep 10
+	done
+fi
+
 
 OPT=""
 fi
