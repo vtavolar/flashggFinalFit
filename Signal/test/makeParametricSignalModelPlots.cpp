@@ -155,7 +155,7 @@ map<string,RooAddPdf*> getFlashggPdfs(RooWorkspace *work, int ncats){
 		result.insert(pair<string,RooAddPdf*>(Form("%s",flashggCats_[cat].c_str()),(RooAddPdf*)work->pdf(Form("sigpdfrel%s_allProcs",flashggCats_[cat].c_str()))));
 	}
 	std::cout<<work->pdf("sigpdfrelAllCats_allProcs")<<std::endl;
-	std::cout<<work->pdf("sigpdfrelAllCats_allProcs")->GetName()<<std::endl;
+	//	std::cout<<work->pdf("sigpdfrelAllCats_allProcs")->GetName()<<std::endl;
 	//	result.insert(pair<string,RooAddPdf*>("all",(RooAddPdf*)work->pdf("sigpdfrelAllCats_allProcs")));
 
 	return result;
@@ -163,15 +163,15 @@ map<string,RooAddPdf*> getFlashggPdfs(RooWorkspace *work, int ncats){
 
 map<string,RooAddPdf*> getFlashggPdfsGranular(RooWorkspace *work, int ncats){
 
-	map<string,RooAddPdf*> result;
-	for (int cat=0; cat<ncats; cat++){
+  map<string,RooAddPdf*> result;
+  for (int cat=0; cat<ncats; cat++){
     for (int proc=0; proc< procs_.size() ; proc++){
-		result.insert(pair<string,RooAddPdf*>(Form("%s_%s",procs_[proc].c_str(),flashggCats_[cat].c_str()),(RooAddPdf*)work->pdf((Form("extendhggpdfsmrel_13TeV_%s_%sThisLumi",procs_[proc].c_str(),flashggCats_[cat].c_str())))));
-  assert(work->pdf((Form("extendhggpdfsmrel_13TeV_%s_%sThisLumi",procs_[proc].c_str(),flashggCats_[cat].c_str()))));
-	}
+      result.insert(pair<string,RooAddPdf*>(Form("%s_%s",procs_[proc].c_str(),flashggCats_[cat].c_str()),(RooAddPdf*)work->pdf((Form("extendhggpdfsmrel_13TeV_%s_%sThisLumi",procs_[proc].c_str(),flashggCats_[cat].c_str())))));
+      assert(work->pdf((Form("extendhggpdfsmrel_13TeV_%s_%sThisLumi",procs_[proc].c_str(),flashggCats_[cat].c_str()))));
+    }
   }
   
-	return result;
+  return result;
 }
 
 void printInfo(map<string,RooDataSet*> data, map<string,RooAddPdf*> pdfs){
@@ -525,17 +525,21 @@ int main(int argc, char *argv[]){
   
   
   TFile *hggFile = TFile::Open(filename_.c_str());
+  std::cout<<"filename is "<< filename_ << std::endl;
   RooWorkspace *hggWS;
   hggWS = (RooWorkspace*)hggFile->Get(Form("wsig_%dTeV",sqrts_));
   if (!hggWS) {
     cerr << "Workspace is null" << endl;
     exit(1);
   }
+  //  hggWS->Print();
   
   RooRealVar *mass= (RooRealVar*)hggWS->var("CMS_hgg_mass");
   std::cout<<"CMS_hgg_mass retrieved from ws"<<std::endl;
+  mass->Print();
   RooRealVar *mh = (RooRealVar*)hggWS->var("MH");
   std::cout<<"MH retrieved from ws"<<std::endl;
+  mh->Print();
   mh->setVal(m_hyp_);
   mass->setRange("higgsRange",m_hyp_-20.,m_hyp_+15.);
   
