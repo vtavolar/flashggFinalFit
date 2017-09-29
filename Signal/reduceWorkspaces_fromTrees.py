@@ -1,3 +1,5 @@
+#obsolete file
+
 #!/usr/bin/env python
 # 
 # --------------------------------------------
@@ -131,11 +133,11 @@ def main(o,args):
         varset = variables[ivarset]
         print 'we look at the variable ...'
         print variables[ivarset]
-        if not variables[ivarset][-1]:
-            variables[ivarset] = (variables[ivarset][0], variables[ivarset][1], variables[ivarset][2], variables[ivarset][2])
-        if not variables[ivarset][1]:
-            variables[ivarset] = (variables[ivarset][0], variables[ivarset][0], variables[ivarset][2], [1,1])
-            isData=True
+        if not variables[ivarset][-2] and (variables[ivarset][0] and variables[ivarset][1] ):
+            variables[ivarset] = (variables[ivarset][0], variables[ivarset][1], variables[ivarset][-1], variables[ivarset][-1])
+#        if not variables[ivarset][1]:
+#            variables[ivarset] = (variables[ivarset][0], variables[ivarset][0], variables[ivarset][2], [1,1])
+#            isData=True
         variables_0.append(variables[ivarset][0])
         variables_1.append(variables[ivarset][1])
 
@@ -147,12 +149,12 @@ def main(o,args):
         branchNames = tree.GetListOfBranches().Clone()
         for i in range( branchNames.GetEntries() ):
             varsInTree.append(branchNames.At(i).GetName())
-        print "varsInTree"
-        print varsInTree
+#        print "varsInTree"
+#        print varsInTree
         #do not dump into ws vars if they are needed only for splitting, or if they are "other" vars not used at the moment (not even for splitting)
         varsToDump = [var for var in varsInTree if (var not in options.othervars and var not in variables_0 and var not in variables_1) ]
-        print "varsToDump"
-        print varsToDump
+#        print "varsToDump"
+#        print varsToDump
         #eliminate duplicates from list
         varsToDump = list(set(varsToDump))
         roorealvars=[]
@@ -165,11 +167,11 @@ def main(o,args):
 #        print varsToDump[23]
 #        del varsToDump[23]
         
-        print "varsToDump before for"
-        print varsToDump
+#        print "varsToDump before for"
+#        print varsToDump
         for var in varsToDump:
-            print "print them one by one"
-            print var
+#            print "print them one by one"
+#            print var
 #            val = tree.GetBranch(var).GetEntry(0)
 #            print type(val)
 ##            if type(val) is int:
@@ -182,64 +184,15 @@ def main(o,args):
             else:
                 rrv = RooRealVar(str(var), str(var), -float("inf"), float("inf"))
 #                rrv = wspace.factory(str(var)+"[0.]")
-                rrv.Print()
+#                rrv.Print()
 #                rrv.SetName(str(var))
 #                rrv.SetTitle(str(var))
                 roorealvars.append(rrv)
                 rooarglist.add(rrv, True)
         datasetsReduced={}
-        print roorealvars
+#        print roorealvars
         rooarglist.Print()
 
-
-##        for proc in procs:
-##            print "proc ",proc
-##            for cat in cats:
-##                print "cat ",cat
-##                tree = infile.Get( "tagsDumper/trees/"+str(proc)+"_"+str(cat) )
-##                tree.SetAlias("myGenNjets2p5", "(genJet2p5Numberofdaughters0 > 5) + (genJet2p5Numberofdaughters1 > 5) + (genJet2p5Numberofdaughters2 > 5) + (genJet2p5Numberofdaughters3 > 5) + (genJet2p5Numberofdaughters4 > 5) + (genJet2p5Numberofdaughters5 > 5)")
-##                boundaries = []
-##                boundaries.append( variables[ivarset][-2] )
-##                boundaries.append( variables[ivarset][-1] )
-##                print "root hasattr before"
-##                print hasattr(ROOT, "vecBoundaries")
-##                if not hasattr(ROOT, "vecBoundaries"):
-##                    gROOT.ProcessLine(" std::vector<std::vector<double > >* vecBoundaries = new std::vector<std::vector<double > >() ;")
-##                else:
-##                    ROOT.vecBoundaries.clear()
-##                print "root hasattr after"
-##                print hasattr(ROOT, "vecBoundaries")
-##                if not hasattr(ROOT, "tempvec"):
-##                    gROOT.ProcessLine("std::vector<double >* tempvec = new std::vector<double >() ;")
-##                else:
-##                    ROOT.tempvec.clear()
-##                for b in variables[ivarset][-2]:
-##                    ROOT.tempvec.push_back(b)
-##                ROOT.vecBoundaries.push_back(tempvec)
-##                ROOT.tempvec.clear()
-##                for b in variables[ivarset][-1]:
-##                    ROOT.tempvec.push_back(b)
-##                ROOT.vecBoundaries.push_back(tempvec)
-##                filler = DataSetFiller(str(proc), str(cat), rooarglist, "weight", False, True)
-##                wei = TCut("weight")
-##                if options.cut:
-##                    wei *= TCut(str(options.cut))
-##                if not hasattr(ROOT, "obsnames"):
-##                    gROOT.ProcessLine("std::vector<std::string >* obsnames = new std::vector<std::string >() ;")
-##                else:
-##                    ROOT.obsnames.clear()
-##                ROOT.obsnames.push_back( str( variables[ivarset][0] ) )
-##                ROOT.obsnames.push_back( str( variables[ivarset][1] ) )
-##                print obsnames
-##                filler.setGrid(ROOT.obsnames, vecBoundaries )
-##                filler.fillFromTree(tree,wei.GetTitle())
-##                if not hasattr(ROOT, "datasets"):
-##                    gROOT.ProcessLine("std::vector<RooDataSet* >* datasets = new std::vector<RooDataSet* >() ;")
-##                else:
-##                    ROOT.datasets.clear()
-##                ROOT.datasets = filler.get()
-##                for ids in range( ROOT.datasets.size() ):
-##                    datasetsReduced[ ROOT.datasets[ids].GetName() ] = ( ROOT.datasets[ids] )
 
         systlabels = getSystLabels()
         rrv_cms_mass = RooRealVar("CMS_hgg_mass", "CMS_hgg_mass", 100, 180)
@@ -281,11 +234,11 @@ def main(o,args):
                         gROOT.ProcessLine("std::vector<double >* tempvec = new std::vector<double >() ;")
                     else:
                         ROOT.tempvec.clear()
-                    for b in variables[ivarset][-2]:
+                    for b in variables[ivarset][-1]:
                         ROOT.tempvec.push_back(b)
                     ROOT.vecBoundaries.push_back(tempvec)
                     ROOT.tempvec.clear()
-                    for b in variables[ivarset][-1]:
+                    for b in variables[ivarset][-2]:
                         ROOT.tempvec.push_back(b)
                     ROOT.vecBoundaries.push_back(tempvec)
                     if label == "":
@@ -299,8 +252,8 @@ def main(o,args):
                         gROOT.ProcessLine("std::vector<std::string >* obsnames = new std::vector<std::string >() ;")
                     else:
                         ROOT.obsnames.clear()
-                    ROOT.obsnames.push_back( str( variables[ivarset][0] ) )
-                    ROOT.obsnames.push_back( str( variables[ivarset][1] ) )
+                    ROOT.obsnames.push_back( str( variables[ivarset][1] ) ) #first reco
+                    ROOT.obsnames.push_back( str( variables[ivarset][0] ) ) #then gen
                     print obsnames
                     filler.setGrid(ROOT.obsnames, vecBoundaries )
                     filler.fillFromTree(tree,wei.GetTitle())
@@ -348,11 +301,11 @@ def main(o,args):
                         gROOT.ProcessLine("std::vector<double >* tempvec = new std::vector<double >() ;")
                     else:
                         ROOT.tempvec.clear()
-                    for b in variables[ivarset][-2]:
+                    for b in variables[ivarset][-1]:
                         ROOT.tempvec.push_back(b)
                     ROOT.vecBoundaries.push_back(tempvec)
                     ROOT.tempvec.clear()
-                    for b in variables[ivarset][-1]:
+                    for b in variables[ivarset][-2]:
                         ROOT.tempvec.push_back(b)
                     ROOT.vecBoundaries.push_back(tempvec)
                     
@@ -364,8 +317,8 @@ def main(o,args):
                         gROOT.ProcessLine("std::vector<std::string >* obsnames = new std::vector<std::string >() ;")
                     else:
                         ROOT.obsnames.clear()
-                    ROOT.obsnames.push_back( str( variables[ivarset][0] ) )
                     ROOT.obsnames.push_back( str( variables[ivarset][1] ) )
+                    ROOT.obsnames.push_back( str( variables[ivarset][0] ) )
                     print obsnames
                     filler.setGrid(ROOT.obsnames, vecBoundaries )
                     filler.fillFromTree(tree,wei.GetTitle())
