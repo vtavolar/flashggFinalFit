@@ -30,7 +30,7 @@ def getSystLabels():
     for direction in ["Up","Down"]:
         phosystlabels.append("MvaShift%s01sigma" % direction)
         phosystlabels.append("SigmaEOverEShift%s01sigma" % direction)
-        phosystlabels.append("MaterialCentral%s01sigma" % direction)
+#        phosystlabels.append("MaterialCentral%s01sigma" % direction)
         phosystlabels.append("MaterialForward%s01sigma" % direction)
         phosystlabels.append("FNUFEB%s01sigma" % direction)
         phosystlabels.append("FNUFEE%s01sigma" % direction)
@@ -65,7 +65,7 @@ def writeJob(jobId, folder, label, inputfile, outputfile, jsonfile):
     job_file.write('eval `scramv1 runtime -sh`\n')
 
 
-    exec_line = "python $CMSSW_BASE/src/flashggFinalFit/Signal/reduceWs.py -f %s --load $CMSSW_BASE/src/flashggFinalFit/Signal/%s --outfile %s --label %s" %(inputfile, jsonfile, outputfile, label)
+    exec_line = "python $CMSSW_BASE/src/flashggFinalFit/Signal/reduceWs.py --verbose -f %s --load $CMSSW_BASE/src/flashggFinalFit/Signal/%s --outfile %s --label %s" %(inputfile, jsonfile, outputfile, label)
     job_file.write('\t echo "PREPARING TO RUN "\n')
     job_file.write('if ( %s ) then\n'%exec_line)
     job_file.write('\t echo "DONE" \n')
