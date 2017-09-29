@@ -87,6 +87,9 @@ parser.add_option("--refProc",default="",help="ref replacement process")
 parser.add_option("--refProcDiff",default="",help="ref replacement process for differentials")
 parser.add_option("--refTagDiff",default="",help="ref replacement tag for differentials")
 parser.add_option("--refTagWV",default="",help="ref replacement tag for WV")
+parser.add_option("--refProcWV",default="",help="ref replacement proc for WV")
+parser.add_option("--normalisationCut",default="",help="cut on datasets for final normalisation")
+parser.add_option("--skipSecondaryModels",default=False,action="store_true",help="Turn off creation of all additional models")
 (opts,args) = parser.parse_args()
 
 defaults = copy(opts)
@@ -163,6 +166,9 @@ refProcOpt = ""
 refProcDiffOpt = ""
 refTagDiffOpt = ""
 refTagWVOpt = ""
+refProcWVOpt = ""
+normCutOpt = ""
+skipSecModOpt = ""
 
 if opts.shiftOffDiag:
     offdiagopt = " --shiftOffDiag 1"
@@ -174,6 +180,12 @@ if opts.refTagDiff:
     refTagDiffOpt = " --refTagDiff "+str(opts.refTagDiff)
 if opts.refTagWV:
     refTagWVOpt = " --refTagWV "+str(opts.refTagWV)
+if opts.refProcWV:
+    refProcWVOpt = " --refProcWV "+str(opts.refProcWV)
+if opts.normalisationCut:
+    normCutOpt = " --normalisationCut "+str(opts.normalisationCut)
+if opts.skipSecondaryModels:
+    skipSecModOpt = " --skipSecondaryModels "
 
 for proc in  opts.procs.split(","):
   for cat in opts.flashggCats.split(","):
@@ -187,9 +199,9 @@ for proc in  opts.procs.split(","):
     else:
       bsRW=1
     if opts.systdatfile:
-        exec_line = "%s/bin/SignalFit --verbose 3 -i %s -d %s/%s  --mhLow=%s --mhHigh=%s -s %s/%s --procs %s -o  %s/%s -p %s/%s -f %s --changeIntLumi %s --binnedFit 1 --nBins 320 --split %s,%s --beamSpotReweigh %d --dataBeamSpotWidth %f %s %s %s %s %s %s" %(os.getcwd(), opts.infile,os.getcwd(),opts.datfile,opts.mhLow, opts.mhHigh, os.getcwd(),opts.systdatfile, opts.procs,os.getcwd(),opts.outfilename.replace(".root","_%s_%s.root"%(proc,cat)), os.getcwd(),opts.outDir, opts.flashggCats ,opts.changeIntLumi, proc,cat,bsRW,float(opts.bs), mhrefopt, offdiagopt,refProcOpt,refProcDiffOpt,refTagDiffOpt,refTagWVOpt)
+        exec_line = "%s/bin/SignalFit --verbose 3 -i %s -d %s/%s  --mhLow=%s --mhHigh=%s -s %s/%s --procs %s -o  %s/%s -p %s/%s -f %s --changeIntLumi %s --binnedFit 1 --nBins 320 --split %s,%s --beamSpotReweigh %d --dataBeamSpotWidth %f %s %s %s %s %s %s %s %s %s" %(os.getcwd(), opts.infile,os.getcwd(),opts.datfile,opts.mhLow, opts.mhHigh, os.getcwd(),opts.systdatfile, opts.procs,os.getcwd(),opts.outfilename.replace(".root","_%s_%s.root"%(proc,cat)), os.getcwd(),opts.outDir, opts.flashggCats ,opts.changeIntLumi, proc,cat,bsRW,float(opts.bs), mhrefopt, offdiagopt,refProcOpt,refProcDiffOpt,refTagDiffOpt,refTagWVOpt,refProcWVOpt,normCutOpt,skipSecModOpt)
     else:
-        exec_line = "%s/bin/SignalFit --verbose 3 -i %s -d %s/%s  --mhLow=%s --mhHigh=%s  --procs %s -o  %s/%s -p %s/%s -f %s --changeIntLumi %s --binnedFit 1 --nBins 320 --split %s,%s --beamSpotReweigh %d --dataBeamSpotWidth %f %s %s %s %s %s %s" %(os.getcwd(), opts.infile,os.getcwd(),opts.datfile,opts.mhLow, opts.mhHigh, opts.procs,os.getcwd(),opts.outfilename.replace(".root","_%s_%s.root"%(proc,cat)), os.getcwd(),opts.outDir, opts.flashggCats ,opts.changeIntLumi, proc,cat,bsRW,float(opts.bs), mhrefopt, offdiagopt, refProcOpt,refProcDiffOpt,refTagDiffOpt,refTagWVOpt)
+        exec_line = "%s/bin/SignalFit --verbose 3 -i %s -d %s/%s  --mhLow=%s --mhHigh=%s  --procs %s -o  %s/%s -p %s/%s -f %s --changeIntLumi %s --binnedFit 1 --nBins 320 --split %s,%s --beamSpotReweigh %d --dataBeamSpotWidth %f %s %s %s %s %s %s %s %s %s" %(os.getcwd(), opts.infile,os.getcwd(),opts.datfile,opts.mhLow, opts.mhHigh, opts.procs,os.getcwd(),opts.outfilename.replace(".root","_%s_%s.root"%(proc,cat)), os.getcwd(),opts.outDir, opts.flashggCats ,opts.changeIntLumi, proc,cat,bsRW,float(opts.bs), mhrefopt, offdiagopt, refProcOpt,refProcDiffOpt,refTagDiffOpt,refTagWVOpt,refProcWVOpt,normCutOpt, skipSecModOpt)
     #exec_line = "%s/bin/SignalFit -i %s  -p %s -f %s --considerOnly %s -o %s/%s --datfilename %s/%s/SignalFitJobs/outputs/config_%d.dat" %(os.getcwd(), opts.infile,proc,opts.flashggCats,cat,os.getcwd(),opts.outDir,os.getcwd(),opts.outDir, counter)
     #print exec_line
     writePostamble(file,exec_line)
