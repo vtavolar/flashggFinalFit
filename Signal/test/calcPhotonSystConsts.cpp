@@ -490,7 +490,18 @@ int main(int argc, char *argv[]){
 	  vector<TH1F*> hists;
 	  if (isFlashgg_){
 	    string flashggCat = flashggCats_[cat]; 
-	    hists= getHistograms(inFiles,Form("%s_%d_13TeV_%s",proc->c_str(),mh_,flashggCat.c_str()),Form("MCScale%s",phoCat->c_str()));
+	    //VRT 16.05.17: attempt to adapt to differentials naming convenction
+	    string proctemp = *proc;
+	    string procWmassAndE;
+	    if(proctemp.find_first_of("_") != string::npos){
+	      procWmassAndE = proctemp.insert(proctemp.find_first_of("_"), Form("_%d_13TeV", mh_) );
+	    }
+	    else{
+	      procWmassAndE = proctemp.append( Form("_%d_13TeV", mh_) );
+	    }
+
+	    //	    hists= getHistograms(inFiles,Form("%s_%d_13TeV_%s",proc->c_str(),mh_,flashggCat.c_str()),Form("MCScale%s",phoCat->c_str()));
+	    hists= getHistograms(inFiles,Form("%s_%s",procWmassAndE.c_str(),flashggCat.c_str()),Form("MCScale%s",phoCat->c_str()));
 	  }else{
 	    hists= getHistograms(inFiles,Form("th1f_sig_%s_mass_m%d_cat%d",proc->c_str(),mh_,cat),Form("E_scale_%s",phoCat->c_str()));
 	  }
@@ -529,8 +540,20 @@ int main(int argc, char *argv[]){
 	  
 	  vector<TH1F*> hists;
 	  if (isFlashgg_){ // Smearing not yet supported for Flashgg
+
 	    string flashggCat = flashggCats_[cat]; 
-	    hists= getHistograms(inFiles,Form("%s_%d_13TeV_%s",proc->c_str(),mh_,flashggCat.c_str()),Form("MCSmear%s",phoCat->c_str()));
+	    //VRT 16.05.17: attempt to adapt to differentials naming convenction
+	    string proctemp = *proc;
+	    string procWmassAndE;
+	    if(proctemp.find_first_of("_") != string::npos){
+	      procWmassAndE = proctemp.insert(proctemp.find_first_of("_"), Form("_%d_13TeV", mh_) );
+	    }
+	    else{
+	      procWmassAndE = proctemp.append( Form("_%d_13TeV", mh_) );
+	    }
+
+	    //	    hists= getHistograms(inFiles,Form("%s_%d_13TeV_%s",proc->c_str(),mh_,flashggCat.c_str()),Form("MCSmear%s",phoCat->c_str()));
+	    hists= getHistograms(inFiles,Form("%s_%s",procWmassAndE.c_str(),flashggCat.c_str()),Form("MCSmear%s",phoCat->c_str()));
 	  }	 else {
 	    
 	    // this is to ensure nominal comes from the right file
@@ -571,7 +594,19 @@ int main(int argc, char *argv[]){
 	if (photonCatScalesCorrStr_.size()!=0){
 	  for (vector<string>::iterator phoCat=photonCatScalesCorr_.begin(); phoCat!=photonCatScalesCorr_.end(); phoCat++){
 	    string flashggCat = flashggCats_[cat]; 
-	    vector<TH1F*> hists= getHistograms(inFiles,Form("%s_%d_13TeV_%s",proc->c_str(),mh_,flashggCat.c_str()),Form("%s",phoCat->c_str()));
+
+	    //VRT 16.05.17: attempt to adapt to differentials naming convenction
+	    string proctemp = *proc;
+	    string procWmassAndE;
+	    if(proctemp.find_first_of("_") != string::npos){
+	      procWmassAndE = proctemp.insert(proctemp.find_first_of("_"), Form("_%d_13TeV", mh_) );
+	    }
+	    else{
+	      procWmassAndE = proctemp.append( Form("_%d_13TeV", mh_) );
+	    }
+
+	    //	    vector<TH1F*> hists= getHistograms(inFiles,Form("%s_%d_13TeV_%s",proc->c_str(),mh_,flashggCat.c_str()),Form("%s",phoCat->c_str()));
+	    vector<TH1F*> hists= getHistograms(inFiles,Form("%s_%s",procWmassAndE.c_str(),flashggCat.c_str()),Form("%s",phoCat->c_str()));
 	    
 	    // this is to ensure nominal comes from the right file
 	    TH1F *nominal = hists[0];
