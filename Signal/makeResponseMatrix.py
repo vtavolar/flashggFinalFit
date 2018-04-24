@@ -1,3 +1,5 @@
+###OUTDATED SCRIPT, SUPERSEDED BY PYTHON NOTEBOOK
+
 #!/usr/bin/env python2.7
 ###!/usr/bin/env python
 # 
@@ -23,6 +25,7 @@ import tdrstyle
 import CMS_lumi
 reload(tdrstyle)
 reload(CMS_lumi)
+tdrstyle.setTDRStyle()
 
 CMS_lumi.lumi_13TeV = ''
 CMS_lumi.extraText = 'Simulation Preliminary'
@@ -31,7 +34,8 @@ CMS_lumi.relPosY = -0.06
 
 
 from ROOT import gROOT
-gROOT.ForceStyle()
+gStyle.Print()
+#gROOT.ForceStyle()
 gStyle.SetOptTitle(0)
 gStyle.SetOptStat(0)
 
