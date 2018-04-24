@@ -1227,6 +1227,7 @@ void FinalModelConstruction::getNormalization(std::string cut ){
       float sumEntries = data->sumEntries(cut.c_str()); 
       std::cout<<"sumentries all is "<<data->sumEntries()<<" , after cut is "<<data->sumEntries(cut.c_str())<<std::endl;
       if (sumEntries <0 || isToSkip_ ) {
+	//if (sumEntries <0 ) {
 	sumEntries =0; //negative eff*acc makes no sense...
 	fitToConstant=1;
       }
