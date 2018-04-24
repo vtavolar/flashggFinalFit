@@ -231,12 +231,11 @@ void DataSetFiller::setGrid(std::vector<std::string > obs, std::vector<std::vect
 void DataSetFiller::fillFromTree(TTree * tree, const char * weightExpr, bool ignoreExpr)
 {
 
-    
-    size_t nvar = vars_.getSize();
+     size_t nvar = vars_.getSize();
     std::vector<TTreeFormula *> formulas(nvar);
     TTreeFormula * weight = (weightExpr != 0 ? new TTreeFormula("weight",weightExpr,tree) : 0);
     for(size_t ivar=0; ivar<nvar; ++ivar){
-        RooRealVar &var = dynamic_cast<RooRealVar &>( vars_[ivar] );
+         RooRealVar &var = dynamic_cast<RooRealVar &>( vars_[ivar] );
         if( std::string(var.GetName()) == "weight" ) { 
             formulas[ivar] = weight;
         } else{
@@ -247,7 +246,7 @@ void DataSetFiller::fillFromTree(TTree * tree, const char * weightExpr, bool ign
 
     std::vector<TTreeFormula *> formulas_obs;
     for(size_t iobs=0; iobs<obs_.size(); ++iobs){
-        if( ! (obs_[iobs] == "")){
+         if( ! (obs_[iobs] == "")){
             //            std::cout<<"this obs is "<<obs_[iobs]<<", so we add it"<<std::endl;
             TTreeFormula* fo= new TTreeFormula( obs_[iobs].c_str(), obs_[iobs].c_str(), tree );
             formulas_obs.push_back(fo);
@@ -258,7 +257,7 @@ void DataSetFiller::fillFromTree(TTree * tree, const char * weightExpr, bool ign
     //    std::cout<<"size of obs formulas "<<formulas_obs.size()<<std::endl;
 
     for(int iev=0; iev<tree->GetEntries(); ++iev) {
-        tree->GetEntry(iev);
+         tree->GetEntry(iev);
         float wei = 1.;
         if( weight ) {
             wei = weight->EvalInstance();
@@ -300,7 +299,7 @@ void DataSetFiller::fillFromTree(TTree * tree, const char * weightExpr, bool ign
 int DataSetFiller::getDatasetIndex(std::vector<double > obsVals){
     std::vector<int > indexes;
     for(int io=0; io<obs_.size(); io++){
-        //        std::cout<<"ds index search: obs index "<<io<<std::endl;
+        //std::cout<<"ds index search: obs index "<<io<<std::endl;
         if(isData_ && ( io>0  ) ){
             break;
         }

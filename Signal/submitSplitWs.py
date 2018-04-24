@@ -23,9 +23,10 @@ def system(exec_line):
   #if options.verbose: print '\t', exec_line
   os.system(exec_line)
 
-def getSystLabels():
+def getSystLabels(isMET):
     phosystlabels=[]
     jetsystlabels=[]
+    metsystlabels=[]
     systlabels=[]
     for direction in ["Up","Down"]:
         phosystlabels.append("MvaShift%s01sigma" % direction)
@@ -39,6 +40,10 @@ def getSystLabels():
         jetsystlabels.append("JEC%s01sigma" % direction)
         jetsystlabels.append("JER%s01sigma" % direction)
         jetsystlabels.append("PUJIDShift%s01sigma" % direction)        
+        metsystlabels.append("metJecUncertainty%s01sigma" % direction)
+        metsystlabels.append("metJerUncertainty%s01sigma" % direction)
+        metsystlabels.append("metPhoUncertainty%s01sigma" % direction)
+        metsystlabels.append("metUncUncertainty%s01sigma" % direction)
         for r9 in ["HighR9","LowR9"]:
             for region in ["EB","EE"]:
                 phosystlabels.append("ShowerShape%s%s%s01sigma"%(r9,region,direction))
@@ -47,6 +52,8 @@ def getSystLabels():
                     phosystlabels.append("MCSmear%s%s%s%s01sigma" % (r9,region,var,direction))
     systlabels += phosystlabels
     systlabels += jetsystlabels
+    if isMET:
+      systlabels += metsystlabels
     return systlabels
 
 def writeJob(jobId, folder, label, inputfile, outputfile, jsonfile):
@@ -101,20 +108,23 @@ def writeJob(jobId, folder, label, inputfile, outputfile, jsonfile):
 
 
 def main(o,args):
-    if options.doSysts:
-        syslabels = getSystLabels()
-    else:
-        syslabels = []
-    syslabels.append("nominal")
-    if options.doPdfWeights:
-        syslabels.append("pdfWeights")
-    counter = 0
-    if not os.path.exists(options.outdir):
-      os.makedirs(options.outdir)
-    for label in syslabels:
+  isMET=False
+  if ("MET" in  options.outdir):
+    isMET=True
+  if options.doSysts:
+      syslabels = getSystLabels(isMET)
+  else:
+      syslabels = []
+  syslabels.append("nominal")
+  if options.doPdfWeights:
+      syslabels.append("pdfWeights")
+  counter = 0
+  if not os.path.exists(options.outdir):
+    os.makedirs(options.outdir)
+  for label in syslabels:
 
-        writeJob(counter, options.outdir, label, options.infile, options.outfile, options.json)        
-        counter = counter+1
+      writeJob(counter, options.outdir, label, options.infile, options.outfile, options.json)        
+      counter = counter+1
 
 
 if __name__ == "__main__":
