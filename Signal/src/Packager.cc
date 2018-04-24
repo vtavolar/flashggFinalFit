@@ -146,8 +146,9 @@ void Packager::packageOutput(bool split, string process , string tag){
       // sum eA
       //WS->Print();
       RooSpline1D *norm = (RooSpline1D*)/*in*/WS->function(Form("hggpdfsmrel_%dTeV_%s_%s_norm",sqrts_,proc->c_str(),catname.c_str()));
-      
+      std::cout<<"trying to read norm spline "<< Form("hggpdfsmrel_%dTeV_%s_%s_norm",sqrts_,proc->c_str(),catname.c_str()) << std::endl;
       if (!norm) {
+	std::cout<<"NOT FOUND norm spline "<< Form("hggpdfsmrel_%dTeV_%s_%s_norm",sqrts_,proc->c_str(),catname.c_str()) << std::endl;
 	if (!split_)	cerr << "[WARNING] -- ea: " << Form("hggpdfsmrel_%dTeV_%s_%s_norm",sqrts_,proc->c_str(),catname.c_str()) << " not found. It will be skipped" << endl;
       }
       else {
@@ -158,13 +159,20 @@ void Packager::packageOutput(bool split, string process , string tag){
         runningNormSumVal+= norm->getVal();
 	MH->setVal(125);
 	if(runningNormSumVal_2!=0){
+	  std::cout<<"writing fractionsPerCat"<<std::endl;
+	  std::cout<<proc->c_str()<<"     "<<catname.c_str()<<"   "<< norm->getVal()/runningNormSumVal_2 <<"\n";
 	  fractionsPerCat<<proc->c_str()<<"	"<<catname.c_str()<<"	"<< norm->getVal()/runningNormSumVal_2 <<"\n";
 	  //	  if ( (*proc).find("Outside") != std::string::npos   ) binsToSkip<<proc->c_str()<<"        "<<catname.c_str()<<" foundOutside\n";
 	  if( norm->getVal()/runningNormSumVal_2 < 0.004 && ! ( (*proc).find("Outside") != std::string::npos ) ){
+	    std::cout<<"writing binstoskip"<<std::endl;
+	    std::cout<<proc->c_str()<<"	"<<catname.c_str()<<"\n";
 	    binsToSkip<<proc->c_str()<<"	"<<catname.c_str()<<"\n";
 	  }
 	}
 	else{
+	  std::cout<<"norm is zero, writing 0.0"<<std::endl;
+	  std::cout<<proc->c_str()<<"	"<<catname.c_str()<<"	0.0\n";
+	  std::cout<<proc->c_str()<<"	"<<catname.c_str()<<"\n";
 	  fractionsPerCat<<proc->c_str()<<"	"<<catname.c_str()<<"	0.0\n";
 	  binsToSkip<<proc->c_str()<<"	"<<catname.c_str()<<"\n";
 	}
