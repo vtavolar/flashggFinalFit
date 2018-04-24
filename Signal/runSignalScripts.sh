@@ -11,6 +11,7 @@ SCALESGLOBAL="NonLinearity,Geant4,LightYield,Absolute"
 SMEARS="HighR9EE,LowR9EE,HighR9EB,LowR9EB" #DRY RUN
 FTESTONLY=0
 CALCPHOSYSTONLY=0
+SKIPCALCPHOSYST=0
 SIGFITONLY=0
 SIGPLOTSONLY=0
 INTLUMI=1
@@ -28,6 +29,7 @@ KEEPCURRENTFITS=0
 NOSYSTS=0
 SKIPSECONDARYMODELS=0
 USEFTEST=0
+NOSKIP=0
 usage(){
 	echo "The script runs three signal scripts in this order:"
 		echo "signalFTest --> determines number of gaussians to use for fits of each Tag/Process"
@@ -41,6 +43,7 @@ usage(){
 		echo "--ext)  (default auto)"
 		echo "--fTestOnly) "
 		echo "--calcPhoSystOnly) "
+		echo "--skipCalcPhoSyst) "
 		echo "--sigFitOnly) "
 		echo "--sigPlotsOnly) "
 		echo "--intLumi) specified in fb^-{1} (default $INTLUMI)) "
@@ -49,6 +52,7 @@ usage(){
 		echo "--keepCurrentFits)  keep existing results from fit jobs, if there ) "
 		echo "--noSysts)  no systematics included in signal model) "
 		echo "--shiftOffDiag)  shift scale in off-diag elements of diff analysis) "
+		echo "--noSkip)  do not skip datasets with conditions below minimum) "
 		echo "--refProc)  ref replacement process)"                    
 		echo "--refProcDiff)  ref replacement process for differentials)"
 		echo "--refTagDiff)  ref replacement tag for differentials)"  
@@ -64,7 +68,7 @@ usage(){
 
 
 # options may be followed by one colon to indicate they have a required argument
-if ! options=$(getopt -u -o hi:p:f: -l help,inputFile:,procs:,bs:,smears:,scales:,scalesCorr:,scalesGlobal:,flashggCats:,ext:,fTestOnly,calcPhoSystOnly,sigFitOnly,sigPlotsOnly,intLumi:,batch:,MHref:,keepCurrentFits,noSysts,shiftOffDiag,refProc:,refProcDiff:,refTagDiff:,refTagWV:,refProcWV:,normalisationCut:,skipSecondaryModels,useFtest -- "$@")
+if ! options=$(getopt -u -o hi:p:f: -l help,inputFile:,procs:,bs:,smears:,scales:,scalesCorr:,scalesGlobal:,flashggCats:,ext:,fTestOnly,calcPhoSystOnly,skipCalcPhoSyst,sigFitOnly,sigPlotsOnly,intLumi:,batch:,MHref:,keepCurrentFits,noSysts,shiftOffDiag,noSkip,refProc:,refProcDiff:,refTagDiff:,refTagWV:,refProcWV:,normalisationCut:,skipSecondaryModels,useFtest -- "$@")
 then
 # something went wrong, getopt will put out an error message for us
 exit 1
@@ -86,10 +90,12 @@ case $1 in
 --ext) EXT=$2; echo "test" ; shift ;;
 --fTestOnly) FTESTONLY=1; echo "ftest" ;;
 --calcPhoSystOnly) CALCPHOSYSTONLY=1;;
+--skipCalcPhoSyst) SKIPCALCPHOSYST=1;;
 --sigFitOnly) SIGFITONLY=1;;
 --keepCurrentFits) KEEPCURRENTFITS=1;;
 --noSysts) NOSYSTS=1;;
 --shiftOffDiag) SHIFTOFFDIAG=1;;
+--noSkip) NOSKIP=1;;
 --sigPlotsOnly) SIGPLOTSONLY=1;;
 --intLumi) INTLUMI=$2; shift ;;
 --batch) BATCH=$2; shift;;
@@ -125,6 +131,9 @@ FTESTONLY=1
 CALCPHOSYSTONLY=1
 SIGFITONLY=1
 SIGPLOTSONLY=1
+fi
+if [ $SKIPCALCPHOSYST == 1  ];then
+CALCPHOSYSTONLY=0
 fi
 
 if [[ $BATCH == "IC" ]]; then
@@ -261,6 +270,9 @@ if [ $SIGFITONLY == 1 ]; then
     SIGFITOPTS=""
     if [ $SHIFTOFFDIAG == 1 ]; then
 	SIGFITOPTS="${SIGFITOPTS} --shiftOffDiag 1"
+    fi
+    if [ $NOSKIP == 1 ]; then
+	SIGFITOPTS="${SIGFITOPTS} --noSkip 1"
     fi
     if [[ $REFPROC ]]; then
 	SIGFITOPTS="${SIGFITOPTS} --refProc $REFPROC"
