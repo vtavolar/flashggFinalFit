@@ -151,6 +151,7 @@ RooRealVar *procIndex_;
 RooRealVar *intLumi_;
 bool beamSpotReweigh_ = false;
 bool shiftOffDiag_ = false;
+bool noSkip_ = false;
 float MHref_ = 0.;
 
 string optReferenceProc_ = "";
@@ -210,6 +211,7 @@ void OptionParser(int argc, char *argv[]){
     ("refTagWV", po::value<			string>(&optReferenceTagWV_)->default_value(""),            			"reference tag for replacement WV")
     ("refProcWV", po::value<			string>(&optReferenceProcWV_)->default_value(""),            			"reference proc for replacement WV")
     ("normalisationCut", po::value<string>(&normalisationCut_)->default_value("1"),            			"specify cut to apply on the final normalisation, e.g. select process with processIndex == xx")
+    ("noSkip",po::value<bool>(&noSkip_)->default_value(false)," Do not skip datasets with conditions below minimum")
     ;                                                                                             		
   
   po::options_description desc("Allowed options");
@@ -913,7 +915,7 @@ int main(int argc, char *argv[]){
     
     bool isProblemCategory =false;
     bool isToSkip =false;
-    
+
     //these flags make sure the replacement happens for all mass points if only one falls below threshold
     bool tooFewEntriesRV=false;
     bool tooFewEntriesWV=false;
@@ -1109,7 +1111,7 @@ int main(int argc, char *argv[]){
       if (tooFewEntriesRV  || negSumEntriesRV || belowMinConditionsRV  || ( userSkipRV) ){ //the flags for entries make sure the replacement happens for all mass points if only one falls below threshold
 	std::cout << "[INFO] too few entries to use for fits in RV! nEntries " << nEntriesRV << " sumEntries " << sEntriesRV << " userSkipRV " << userSkipRV<< std::endl;
 	isProblemCategory=true;        
-	if( belowMinConditionsRV ) isToSkip=true;
+	if( belowMinConditionsRV && !noSkip_ ) isToSkip=true;
 	std::cout<<"proc, cat: "<<proc<<", "<<cat<<std::endl;
 	int thisProcCatIndex = getIndexOfReferenceDataset(proc,cat);
         
