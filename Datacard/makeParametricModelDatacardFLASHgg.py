@@ -631,7 +631,7 @@ def getFlashggLineTheoryEnvelope(proc,cat,name,details):
 brSyst = [0.050,-0.049] #13TeV Values
 # lumi syst
 ####lumiSyst = 0.026 #8TeV Values
-lumiSyst=0.027  #Correct for  13Tev!!!
+lumiSyst=0.025  #Correct for  13Tev!!!
 
 ##Printing Functions
 def printBRSyst():
@@ -703,10 +703,26 @@ if not options.statonly:
    flashggSysts['SigmaEOverEShift'] = 'SigmaEOverEShift'
    flashggSysts['ElectronWeight'] = 'eff_e'
    flashggSysts['electronVetoSF'] = 'electronVetoSF'
-   flashggSysts['MuonWeight'] = 'eff_m'
    flashggSysts['TriggerWeight'] = 'TriggerWeight'
    flashggSysts['JEC'] = 'JEC'
    flashggSysts['JER'] = 'JER'
+   flashggSysts['PUJIDShift'] = 'PUJIDShift'
+
+
+   if any("lepton" in s for s in options.procs) or any("Lepton" in s for s in options.procs):
+      flashggSysts['MuonWeight'] = 'eff_m'
+      flashggSysts['MuonMiniIsoWeight'] = 'eff_m_MiniIso'
+
+
+   if any("Bflavor" in s for s in options.procs) or any("Bjet" in s for s in options.procs):
+      flashggSysts['JetBTagCutWeight'] = 'eff_b'
+
+   if any("MET" in s for s in options.procs):
+      flashggSysts['metPhoUncertainty'] = 'MET_PhotonScale'
+      flashggSysts['metUncUncertainty'] = 'MET_Unclustered'
+      flashggSysts['metJecUncertainty'] = 'MET_JEC'
+      flashggSysts['metJerUncertainty'] = 'MET_JER'
+
 #######   flashggSysts['JetBTagWeight'] = 'eff_b'
    #flashggSysts['MvaLinearSyst'] = 'MvaLinearSyst'
    #flashggSysts[''] =  ''
