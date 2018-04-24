@@ -33,6 +33,7 @@ ISDATA=0
 BS=0
 NOSYSTS=0
 SHIFTOFFDIAG=0
+NOSKIP=0
 SKIPSECONDARYMODELS=0
 MHREF=""
 REFPROC=""
@@ -48,6 +49,7 @@ MULTIPDF=0
 ISTOSKIP=0
 TOSKIP=""
 USEFTEST=0
+SKIPCALCPHOSYST=0
 usage(){
     echo "The script runs background scripts:"
     echo "options:"
@@ -75,6 +77,7 @@ usage(){
     echo "--MHref)  reference mh for xsec ) "
     echo "--noSysts)  no systs in signal model ) "
     echo "--shiftOffDiag)  shift scale in off-diag elements of diff analysis ) "
+    echo "--noSkip)  do not skip datasets below min conditions for signal model ) "
     echo "--skipSecondaryModels) Turn off creation of all additional models ) "
     echo "--keepCurrentFits)  keep existing results of signal fits, if there ) "
     echo "--datacardDifferential)  automatic numbering of processes in datacard for differential analysis) "
@@ -89,6 +92,7 @@ usage(){
     echo "--normalisationCut) cut on datasets for final signal normalisation)"      
     echo "--useFtest) Use f-test result as it is, without manual tuning) "
     echo "--monitorDataPlots) monitor jobs submitted for data mass plots) "
+    echo "--skipCalcPhoSyst) "
 }
 
 
@@ -96,7 +100,7 @@ usage(){
 
 
 # options may be followed by one colon to indicate they have a required argument
-if ! options=$(getopt -u -o hi:p:f: -l help,inputFile:,procs:,bs:,flashggCats:,ext:,smears:,scales:,pseudoDataDat:,sigFile:,combine,combineOnly,combinePlotsOnly,signalOnly,backgroundOnly,datacardOnly,superloop:,continueLoop:,intLumi:,unblind,noBkgPlots,noSysts,shiftOffDiag,skipSecondaryModels,isData,isFakeData,dataFile:,batch:,verbose,MHref:,keepCurrentFits,datacardDifferential,multiPdf,isToSkip,toSkip:,refProc:,refProcDiff:,refTagDiff:,refTagWV:,refProcWV:,normalisationCut:,useFtest,monitorDataPlots -- "$@")
+if ! options=$(getopt -u -o hi:p:f: -l help,inputFile:,procs:,bs:,flashggCats:,ext:,smears:,scales:,pseudoDataDat:,sigFile:,combine,combineOnly,combinePlotsOnly,signalOnly,backgroundOnly,datacardOnly,superloop:,continueLoop:,intLumi:,unblind,noBkgPlots,noSysts,shiftOffDiag,noSkip,skipSecondaryModels,isData,isFakeData,dataFile:,batch:,verbose,MHref:,keepCurrentFits,datacardDifferential,multiPdf,isToSkip,toSkip:,refProc:,refProcDiff:,refTagDiff:,refTagWV:,refProcWV:,normalisationCut:,useFtest,monitorDataPlots,skipCalcPhoSyst -- "$@")
 then
 # something went wrong, getopt will put out an error message for us
     exit 1
@@ -136,6 +140,7 @@ do
 	--MHref) MHREF=$2; shift;;
 	--noSysts) NOSYSTS=1;;
 	--shiftOffDiag) SHIFTOFFDIAG=1;;
+	--noSkip) NOSKIP=1;;
 	--skipSecondaryModels) SKIPSECONDARYMODELS=1;;
 	--keepCurrentFits) KEEPCURRENTFITS=1;;
 	--datacardDifferential) DATACARDDIFFERENTIAL=1;;
@@ -150,7 +155,7 @@ do
 	--normalisationCut) NORMCUT=$2; shift;;
 	--useFtest) USEFTEST=1;;
 	--monitorDataPlots) MONITORDATAPLOTS=1;;
-
+	--skipCalcPhoSyst) SKIPCALCPHOSYST=1;;
 	(--) shift; break;;
 	(-*) usage; echo "$0: error - unrecognized option $1" 1>&2; usage >> /dev/stderr; exit 1;;
 	(*) break;;
@@ -209,6 +214,9 @@ if [ $CONTINUELOOP == 0 ]; then
 	if [ $SHIFTOFFDIAG == 1 ]; then
 	    RUNSIGOPT="${RUNSIGOPT} --shiftOffDiag"
 	fi
+	if [ $NOSKIP == 1 ]; then
+	    RUNSIGOPT="${RUNSIGOPT} --noSkip"
+	fi
 	if [ $SKIPSECONDARYMODELS == 1 ]; then
 	    RUNSIGOPT="${RUNSIGOPT} --skipSecondaryModels"
 	fi
@@ -232,6 +240,9 @@ if [ $CONTINUELOOP == 0 ]; then
 	fi
 	if [ $USEFTEST == 1 ]; then
 	    RUNSIGOPT="${RUNSIGOPT} --useFtest"
+	fi
+	if [ $SKIPCALCPHOSYST == 1 ]; then
+	    RUNSIGOPT="${RUNSIGOPT} --skipCalcPhoSyst"
 	fi
 
 	echo "runsigopt is $RUNSIGOPT"
