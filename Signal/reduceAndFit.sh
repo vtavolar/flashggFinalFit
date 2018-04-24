@@ -1,9 +1,10 @@
-M#!/bin/bash
-
 OBS="test"
 EXT="test_EXT"
 
 DOSPLIT=1
+echo "DOSPLIT n.1"
+echo $DOSPLIT
+
 
 usage(){
     echo "The script runs splitting of the workspaces, sig and bkg model construction and final combine fits:"
@@ -21,12 +22,21 @@ usage(){
     echo "--refProc, reference replacement process )" 
     echo "--refProcDiff, reference replacement process for differentials )" 
     echo "--refProcWV, reference replacement process for WV datasets )" 
+    echo "--range, range for POIs scan )" 
+    echo "--npoints, number of points for POIs scan )" 
+    echo "--noSkip, do not skip datasets below min conditions for signal model)" 
     echo "--sigModOpt, more options to be propagated to signal model scripts )" 
     echo "--bkgModOpt, more options to be propagated to bkg model scripts )"    
     echo "--DatacardOpt, more options to be propagated to datacard scripts )"      
+    echo "--runCombineOnly, assume models and datacard are there and only run combine )" 
+    echo "--runDatacardOnly, produce datacard only, assuming inputs are already there )" 
+    echo "--runSignalOnly, produce singnal models only )" 
+    echo "--runBackgorundOnly, produce bkg only )" 
+    echo "--shiftOffDiag, correct for bias in off-diag elements when using diag replacement )" 
+    echo "--unblind, unblind )" 
 }
 
-if ! options=$(getopt -u -o hi:p:f: -l help,skipSplit,obs:,ext:,dirIA:,dirOA:,dirData:,refTagDiff:,refTagWV:,refProc:,refProcDiff:,refProcWV:,sigModOpt:,bkgModOpt:,DatacardOpt: -- "$@")
+if ! options=$(getopt -u -o hi:p:f: -l help,skipSplit,obs:,ext:,dirIA:,dirOA:,dirData:,shiftOffDiag:,refTagDiff:,refTagWV:,refProc:,refProcDiff:,refProcWV:,range:,npoints:,noSkip:,sigModOpt:,bkgModOpt:,DatacardOpt:,runCombineOnly:,runDatacardOnly:,runSignalOnly:,runBackgroundOnly:,unblind: -- "$@")
 then
 # something went wrong, getopt will put out an error message for us
     exit 1
@@ -43,9 +53,23 @@ REFTAGWV="cat0"
 REFPROC="ggh"
 REFPROCDIFF="ggh"
 REFPROCWV="ggh"
+NOSKIP=0
+SHIFTOFFDIAG=1
 SIGMODOPT=""
 BKGMODOPT=""
 DATACARDOPT=""
+COMBINEONLY=0
+DATACARDONLY=0
+SIGNALONLY=0
+BKGONLY=0
+RANGE="[1,-1.0,3.0]"
+NPOINTS="20"
+UNBLIND=0
+
+
+echo "DOSPLIT n.2"
+echo $DOSPLIT
+
 
 while [ $# -gt 0 ]
 do
@@ -63,16 +87,29 @@ do
 	--refProc) REFPROC=$2; shift;;
 	--refProcDiff) REFPROCDIFF=$2; shift;;
 	--refProcWV) REFPROCWV=$2; shift;;
+	--range) RANGE=$2; shift;;
+	--npoints) NPOINTS=$2; shift;;
+	--noSkip) NOSKIP=$2; shift;;
 	--sigModOpt) SIGMODOPT=$2; shift;;
 	--bkgModOpt) BKGMODOPT=$2; shift;;
 	--DatacardOpt) DATACARDOPT=$2; shift;;
+	--runCombineOnly) COMBINEONLY=$2; shift;;
+	--runDatacardOnly) DATACARDONLY=$2; shift;;
+	--runSignalOnly) SIGNALONLY=$2; shift;;
+	--runBackgroundOnly) BKGONLY=$2; shift;;
+	--shiftOffDiag) SHIFTOFFDIAG=$2; shift;;
+	--unblind) UNBLIND=$2; shift;;
 
 	(--) shift; break;;
-	(-*) usage; echo "$0: error - unrecognized option $1" 1>&2; usage >> /dev/stderr; exit 1;;
+	(-*) usage; echo "$0: error - reduceAndFit.sh - unrecognized option $1" 1>&2; usage >> /dev/stderr; exit 1;;
 	(*) break;;
     esac
     shift
 done
+
+echo "DOSPLIT n.3"
+echo $DOSPLIT
+
 
 echo "EXT"
 echo $EXT
@@ -93,7 +130,7 @@ if [ $DOSPLIT == 1 ]; then
     
     python submitSplitWs.py -q "short.q" -b "T3CH" -i ${NTUPLES_DIR_IA}/allSig_120.root -j jsons/${EXT}/reduce_cfg_mc_${OBS}_120.json -o reduced${OBS}IA.root  --outdir m120_${EXT}/
     python submitSplitWs.py -q "short.q" -b "T3CH" -i ${NTUPLES_DIR_IA}/allSig_130.root -j jsons/${EXT}/reduce_cfg_mc_${OBS}_130.json -o reduced${OBS}IA.root  --outdir m130_${EXT}/
-    python submitSplitWs.py -q "short.q" -b "T3CH" -i ${NTUPLES_DIR_IA}/allSig_125.root -j jsons/${EXT}/reduce_cfg_mc_${OBS}_125.json -o reduced${OBS}IA.root  --outdir m125_${EXT}/ --doSysts ###--doPdfWeights
+    python submitSplitWs.py -q "short.q" -b "T3CH" -i ${NTUPLES_DIR_IA}/allSig_125.root -j jsons/${EXT}/reduce_cfg_mc_${OBS}_125.json -o reduced${OBS}IA.root  --outdir m125_${EXT}/  --doSysts ###--doPdfWeights
     
     RUN=0
     DONE=0
@@ -218,7 +255,13 @@ fi
 set -x
 ##bash runFinalFitsScripts_differential_${EXT}.sh --obs=$OBS --ext=$EXT --procs=$PROCNAMES --cats=$CATNAMES --refTagDiff="recoAbsDeltaPhiGgJjEta4p7VBFlike_2p9_3p05_SigmaMpTTag_1" --refTagWV="recoAbsDeltaPhiGgJjEta4p7VBFlike_m1000p0_0p0_SigmaMpTTag_1" --refProcWV="InsideAcceptance_genAbsDeltaPhiGgJjEta4p7VBFlike_m1000p0_0p0" --refProcDiff="InsideAcceptance_genAbsDeltaPhiGgJjEta4p7VBFlike_2p9_3p05" --refProc="InsideAcceptance_genAbsDeltaPhiGgJjEta4p7VBFlike_2p9_3p05" --range="[1,-1.0,3.0]"
 
-bash runFinalFitsScripts_differential_${EXT}.sh --obs=$OBS --ext=$EXT --procs=$PROCNAMES --cats=$CATNAMES --refTagDiff=$REFTAGDIFF --refTagWV=$REFTAGWV --refProcWV=$REFPROCWV --refProcDiff=$REFPROCDIFF --refProc=$REFPROC --range="[1,-1.0,3.0]" --inputDir="/mnt/t3nfs01/data01/shome/vtavolar/FinalFits_74_wip/CMSSW_7_4_7/src/flashggFinalFit/Signal/" --sigModOpt="${SIGMODOPT}"  --DatacardOpt="${DATACARDOPT} " #####--bkgModOpt="${BKGMODOPT}"    ##"${SPECIFICOPTS}" 
+echo "reduceAndFit_Jets.sh: RANGE"
+echo ${RANGE}
+
+bash runFinalFitsScripts_differential_${EXT}.sh --obs=$OBS --ext=$EXT --procs=$PROCNAMES --cats=$CATNAMES --refTagDiff=$REFTAGDIFF --refTagWV=$REFTAGWV --refProcWV=$REFPROCWV --refProcDiff=$REFPROCDIFF --refProc=$REFPROC --noSkip=$NOSKIP --runCombineOnly=$COMBINEONLY --runDatacardOnly=$DATACARDONLY --runSignalOnly=$SIGNALONLY --runBackgroundOnly=$BKGONLY --range=${RANGE} --npoints=${NPOINTS} --shiftOffDiag=${SHIFTOFFDIAG} --unblind=${UNBLIND} --inputDir="/mnt/t3nfs01/data01/shome/vtavolar/FinalFits_74_wip/CMSSW_7_4_7/src/flashggFinalFit/Signal/" ##--sigModOpt="${SIGMODOPT}"  ### --DatacardOpt="${DATACARDOPT} " #####--bkgModOpt="${BKGMODOPT}"    ##"${SPECIFICOPTS}" 
+
+mkdir /afs/cern.ch/user/v/vtavolar/www/DiffHggPt/outdir_Differential_SignalModel_ICHEPconditions_1bis_newphp/afterMoriond17/ub17025/outdir_differential_${EXT}
+cp Background/outdir_differential_${EXT}/bkgPlots-Data/bkgplot_* /afs/cern.ch/user/v/vtavolar/www/DiffHggPt/outdir_Differential_SignalModel_ICHEPconditions_1bis_newphp/afterMoriond17/ub17025/outdir_differential_${EXT}
 
 #python plotMusFromTxt.py --files /mnt/t3nfs01/data01/shome/vtavolar/FinalFits/CMSSW_7_1_5/src/flashggFinalFit/Plots/FinalResults/expectedPrecision_differential_${EXT}_np20.txt -V ${OBS} --resizeFirst -1  --skipFirstInMean --outdir m125_${EXT}
 #python plotMusFromTxt.py --files /mnt/t3nfs01/data01/shome/vtavolar/FinalFits/CMSSW_7_1_5/src/flashggFinalFit/Plots/FinalResults/expectedPrecision_differential_${EXT}_np20.txt -V ${OBS} --resizeFirst -1  --skipFirstInMean
